@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { CartContext } from "../context/CartContext";
 import API from "../api";
@@ -9,266 +9,311 @@ export default function Navbar() {
   const { cart } = useContext(CartContext);
   const navigate = useNavigate();
 
-  const [repImages, setRepImages] = useState({});
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [menu, setMenu] = useState({
+    male: [],
+    female: [],
+    unisex: [],
+  });
+
   const [hoveredGender, setHoveredGender] = useState(null);
-  const [genderTimeout, setGenderTimeout] = useState(null);
-  const [userTimeout, setUserTimeout] = useState(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  // Các ID danh mục cần lấy ảnh (dựa trên MENU_CONFIG bên dưới)
-  const CATEGORY_IDS = [1, 2, 3, 4, 5];
+  // --- STATE CHO MOBILE MENU ---
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileExpandedGender, setMobileExpandedGender] = useState(null);
+  const menuCloseTimer = useRef(null);
+  const userCloseTimer = useRef(null);
 
-  const MENU_CONFIG = {
-    male: {
-      title: "NAM",
-      items: [
-        { name: "Áo Sơ Mi", link: "/category/1?gender=male", repId: 1 },
-        { name: "Áo Khoác/Hoodie", link: "/category/4?gender=male", repId: 4 },
-        { name: "Quần Dài", link: "/category/2?gender=male", repId: 2 },
-      ],
-    },
-    female: {
-      title: "NỮ",
-      items: [
-        { name: "Áo Sơ Mi", link: "/category/1?gender=female", repId: 1 },
-        { name: "Áo Thun", link: "/category/3?gender=female", repId: 3 },
-        { name: "Quần Dài", link: "/category/2?gender=female", repId: 2 },
-      ],
-    },
-    unisex: {
-      title: "UNISEX",
-      items: [
-        { name: "Áo Thun", link: "/category/3?gender=unisex", repId: 3 },
-        { name: "Quần Dài", link: "/category/2?gender=unisex", repId: 2 },
-        { name: "Quần Short", link: "/category/5?gender=unisex", repId: 5 },
-      ],
-    },
+  const toggleMobileGender = (gender) => {
+    if (mobileExpandedGender === gender) {
+      setMobileExpandedGender(null); // Đang mở thì đóng lại
+    } else {
+      setMobileExpandedGender(gender); // Mở cái mới
+    }
   };
 
-  const maleProducts = [
-    { name: "Áo sơ mi", category_id: 1, image: "/public/images/ao-so-mi-nam-white.png" },
-    { name: "Áo khoác", category_id: 4, image: "/public/images/ao-khoac-nam-black.png" },
-    { name: "Quần dài", category_id: 2, image: "/public/images/quan-dai-nam-beige.png" },
-  ];
-
-  // 👉 SỬA ĐỔI QUAN TRỌNG: Lấy 1 sản phẩm từ mỗi danh mục để làm ảnh đại diện
   useEffect(() => {
-    const fetchRepImages = async () => {
-      const imgMap = {};
-
-      // Lấy tất cả gender
-      const genders = Object.keys(MENU_CONFIG);
-
-      // Chạy song song theo gender + repId
-      await Promise.all(
-        genders.map(async (gender) => {
-          await Promise.all(
-            MENU_CONFIG[gender].items.map(async (item) => {
-              try {
-                const res = await API.get("/products", {
-                  params: { category_id: item.repId, limit: 1, gender },
-                });
-
-                const data = res.data;
-                const products = Array.isArray(data)
-                  ? data
-                  : data.data || data.products || [];
-
-                if (products.length > 0 && products[0].image_url) {
-                  // Lưu ảnh theo key gender-repId
-                  imgMap[`${gender}-${item.repId}`] = products[0].image_url;
-                }
-              } catch (err) {
-                console.error(`Lỗi lấy ảnh cho category ${item.repId}`, err);
-              }
-            })
-          );
-        })
-      );
-
-      setRepImages(imgMap);
-    };
-
-    fetchRepImages();
+    loadCategoryMenu();
   }, []);
 
+  useEffect(() => {
+    const refresh = () => loadCategoryMenu();
+    window.addEventListener("categories-updated", refresh);
+    return () => window.removeEventListener("categories-updated", refresh);
+  }, []);
+
+  async function loadCategoryMenu() {
+    try {
+      const res = await API.get("/categories/with-preview");
+      const list = res.data.data || [];
+      const grouped = { male: [], female: [], unisex: [] };
+      list.forEach((c) => {
+        if (grouped[c.gender]) grouped[c.gender].push(c);
+      });
+      setMenu(grouped);
+    } catch (err) {
+      console.error("Lỗi load menu:", err);
+    }
+  }
+
+  const getImgUrl = (path) =>
+    path?.startsWith("http")
+      ? path
+      : `http://localhost:5000${path || "/public/placeholder.jpg"}`;
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
     navigate("/login");
+    setIsMobileMenuOpen(false); // Đóng menu mobile nếu đang mở
   };
 
-  const handleGenderEnter = (gender) => {
-    if (genderTimeout) clearTimeout(genderTimeout);
-    setHoveredGender(gender);
+  // --- DESKTOP HOVER LOGIC ---
+  const openGenderMenu = (g) => {
+    if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current);
+    setHoveredGender(g);
   };
 
-  const handleGenderLeave = () => {
-    const timeout = setTimeout(() => setHoveredGender(null), 100);
-    setGenderTimeout(timeout);
+  const closeGenderMenu = () => {
+    menuCloseTimer.current = setTimeout(() => setHoveredGender(null), 200);
   };
 
-  const handleUserEnter = () => {
-    if (userTimeout) clearTimeout(userTimeout);
+  const handleMouseEnterUser = () => {
+    if (userCloseTimer.current) clearTimeout(userCloseTimer.current);
     setUserMenuOpen(true);
   };
 
-  const handleUserLeave = () => {
-    const timeout = setTimeout(() => setUserMenuOpen(false), 200);
-    setUserTimeout(timeout);
-  };
-
-  const getImgUrl = (path) => {
-    if (!path) return "http://localhost:5000/public/placeholder.jpg";
-    return path.startsWith("http") ? path : `http://localhost:5000${path}`;
+  const handleMouseLeaveUser = () => {
+    userCloseTimer.current = setTimeout(() => setUserMenuOpen(false), 200);
   };
 
   return (
-    <nav className="bg-white shadow-md fixed top-0 left-0 right-0 z-50 h-16">
-      <div className="container mx-auto px-4 h-full flex justify-between items-center">
-        <NavLink
-          to="/"
-          className="text-2xl font-bold text-violet-600 tracking-wider"
-        >
-          CLOTHING SHOP
-        </NavLink>
+    <>
+      <nav className="bg-white shadow-md fixed top-0 left-0 right-0 z-50 h-16">
+        <div className="container mx-auto px-4 flex justify-between items-center h-full">
 
-        {/* MENU CHÍNH */}
-        <div className="hidden md:flex gap-8 h-full items-center">
-          {Object.keys(MENU_CONFIG).map((key) => (
-            <div
-              key={key}
-              className="relative h-full flex items-center group"
-              onMouseEnter={() => handleGenderEnter(key)}
-              onMouseLeave={handleGenderLeave}
-            >
-              <span
-                className={`cursor-pointer font-medium uppercase transition ${hoveredGender === key
-                  ? "text-violet-600 border-b-2 border-violet-600"
-                  : "text-gray-700"
-                  }`}
+          {/* 1. LOGO */}
+          <NavLink to="/" className="text-2xl font-bold text-violet-600">
+            CLOTHING SHOP
+          </NavLink>
+
+          {/* 2. DESKTOP MENU (Ẩn trên Mobile) */}
+          <div className="hidden md:flex gap-10">
+            {["male", "female", "unisex"].map((g) => (
+              <div
+                key={g}
+                className="relative"
+                onMouseEnter={() => openGenderMenu(g)}
+                onMouseLeave={closeGenderMenu}
               >
-                {MENU_CONFIG[key].title}
-              </span>
-
-              {hoveredGender === key && (
-                <div
-                  className="absolute top-full left-0 bg-white shadow-xl rounded-b-lg p-6 border-t border-gray-100 animate-fadeIn"
-                  style={{ width: "600px", left: "-100px" }}
+                <span
+                  className={`cursor-pointer uppercase font-semibold ${hoveredGender === g ? "text-violet-600" : "text-gray-700"
+                    }`}
                 >
-                  <div className="grid grid-cols-3 gap-4">
-                    {MENU_CONFIG[key].items.map((item, index) => (
-                      <div
-                        key={index}
-                        className="group/item cursor-pointer flex flex-col items-center gap-2 p-2 hover:bg-gray-50 rounded transition"
-                        onClick={() => {
-                          setHoveredGender(null);
-                          navigate(item.link);
-                        }}
-                      >
-                        {/* Hiển thị ảnh lấy từ repImages */}
-                        <div className="w-full h-24 overflow-hidden rounded border group-hover/item:border-violet-400">
-                          <img
-                            src={repImages[`${key}-${item.repId}`] ? getImgUrl(repImages[`${key}-${item.repId}`]) : "/public/placeholder.jpg"}
-                            alt={item.name}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
-                          />
+                  {g === "male" && "MALE"}
+                  {g === "female" && "FEMALE"}
+                  {g === "unisex" && "UNISEX"}
+                </span>
+
+                {/* Dropdown Menu Desktop */}
+                {hoveredGender === g && (
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 top-full mt-3 bg-white shadow-2xl border rounded-xl p-6 w-[600px] z-50 animate-fadeIn"
+                    onMouseEnter={() => clearTimeout(menuCloseTimer.current)}
+                    onMouseLeave={closeGenderMenu}
+                  >
+                    <div className="grid grid-cols-3 gap-4">
+                      {menu[g].map((cat) => (
+                        <div
+                          key={cat.id}
+                          className="cursor-pointer group text-center"
+                          onClick={() => navigate(`/category/${cat.id}?gender=${g}`)}
+                        >
+                          <div className="w-full h-24 overflow-hidden rounded border group-hover:border-violet-500">
+                            <img
+                              src={getImgUrl(cat.image_url || cat.preview_image)}
+                              className="w-full h-full object-cover group-hover:scale-110 transition"
+                              alt={cat.name}
+                            />
+                          </div>
+                          <span className="text-sm font-bold mt-2 group-hover:text-violet-700">
+                            {cat.name}
+                          </span>
                         </div>
-                        <span className="text-sm font-bold text-gray-700 group-hover/item:text-violet-700 text-center">
-                          {item.name}
-                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 3. ICONS (Hiện cả Desktop & Mobile) */}
+          <div className="flex items-center gap-5">
+            {/* Search */}
+            <i
+              className="fa-solid fa-magnifying-glass text-xl text-gray-700 cursor-pointer hover:text-violet-600"
+              onClick={() => navigate("/search")}
+            ></i>
+
+            {/* Cart */}
+            <div
+              className="relative cursor-pointer"
+              onClick={() => navigate("/cart")}
+            >
+              <i className="fa-solid fa-cart-shopping text-xl text-gray-700 hover:text-violet-600"></i>
+              {cart.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
+            </div>
+
+            {/* User Icon (Desktop Only) */}
+            <div
+              className="relative hidden md:block"
+              onMouseEnter={handleMouseEnterUser}
+              onMouseLeave={handleMouseLeaveUser}
+            >
+              <i className={`fa-solid fa-user text-xl cursor-pointer ${user ? "text-violet-600" : "text-gray-700 hover:text-violet-600"}`}></i>
+              {/* User Dropdown (Giữ nguyên logic cũ) */}
+              {userMenuOpen && (
+                <div
+                  className="absolute right-0 top-10 bg-white shadow-md rounded-lg border w-48 py-2 z-50"
+                  onMouseEnter={() => clearTimeout(userCloseTimer.current)}
+                >
+                  {user ? (
+                    <>
+                      <div className="px-4 py-2 border-b font-bold text-gray-800">{user.name}</div>
+                      {user.role === "admin" && (
+                        <div className="px-4 py-2 hover:bg-violet-100 cursor-pointer" onClick={() => navigate("/admin")}>Admin</div>
+                      )}
+                      <div className="px-4 py-2 hover:bg-violet-100 cursor-pointer" onClick={() => navigate("/profile")}>Profile</div>
+                      <div className="px-4 py-2 hover:bg-red-100 text-red-600 cursor-pointer" onClick={handleLogout}>Logout</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="px-4 py-2 hover:bg-violet-100 cursor-pointer" onClick={() => navigate("/login")}>Login</div>
+                      <div className="px-4 py-2 hover:bg-violet-100 cursor-pointer" onClick={() => navigate("/register")}>Register</div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Hamburger Button (Mobile Only) */}
+            <button
+              className="md:hidden text-2xl text-gray-700 focus:outline-none w-full"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              <i className={isMobileMenuOpen ? "fa-solid fa-xmark" : "fa-solid fa-bars"}></i>
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* 4. MOBILE MENU DRAWER (Hiện khi bấm Hamburger) */}
+      {isMobileMenuOpen && (
+        <div className="fixed top-16 left-0 right-0 bottom-0 bg-white z-40 overflow-y-auto p-4 md:hidden animate-fadeIn">
+
+          {/* User Info Mobile */}
+          <div className="mb-6 border-b pb-4">
+            {user ? (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-bold">
+                  {user.name.charAt(0)}
+                </div>
+                <div>
+                  <p className="font-bold text-gray-800">{user.name}</p>
+                  <p className="text-xs text-gray-500 cursor-pointer hover:text-violet-600" onClick={() => { navigate("/profile"); setIsMobileMenuOpen(false); }}>
+                    View profile
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-4">
+                <button
+                  onClick={() => { navigate("/login"); setIsMobileMenuOpen(false); }}
+                  className="flex-1 py-2 border border-violet-600 text-violet-600 rounded font-bold"
+                >
+                  Login
+                </button>
+                <button
+                  onClick={() => { navigate("/register"); setIsMobileMenuOpen(false); }}
+                  className="flex-1 py-2 bg-violet-600 text-white rounded font-bold"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Danh mục Nam/Nữ/Unisex dạng Accordion */}
+          <div className="space-y-2">
+            {["male", "female", "unisex"].map((g) => (
+              <div key={g} className="border-b border-gray-100 last:border-0">
+
+                {/* HEADER: Bấm vào để đóng/mở */}
+                <button
+                  onClick={() => toggleMobileGender(g)}
+                  className="w-full flex justify-between items-center py-3 text-left focus:outline-none"
+                >
+                  <span className={`font-bold text-lg uppercase ${mobileExpandedGender === g ? 'text-violet-700' : 'text-gray-700'}`}>
+                    {g === "male" ? "MALE" : g === "female" ? "FEMALE" : "UNISEX"}
+                  </span>
+                  {/* Icon mũi tên xoay */}
+                  <i className={`fa-solid fa-chevron-down transition-transform duration-300 ${mobileExpandedGender === g ? 'rotate-180 text-violet-700' : 'text-gray-400'}`}></i>
+                </button>
+
+                {/* CONTENT: Chỉ hiện khi state trùng khớp */}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${mobileExpandedGender === g ? 'max-h-[1000px] opacity-100 mb-4' : 'max-h-0 opacity-0'
+                    }`}
+                >
+                  <div className="grid grid-cols-2 gap-2 pt-2 pl-2">
+                    {menu[g].map((cat) => (
+                      <div
+                        key={cat.id}
+                        onClick={() => {
+                          navigate(`/category/${cat.id}?gender=${g}`);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="p-3 bg-gray-50 rounded text-sm text-gray-600 hover:bg-violet-50 hover:text-violet-700 cursor-pointer truncate transition"
+                      >
+                        {cat.name}
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* ICONS */}
-        <div className="flex items-center gap-5">
-          <i
-            className="fa-solid fa-magnifying-glass text-gray-700 hover:text-violet-600 cursor-pointer text-lg"
-            onClick={() => navigate("/search")}
-          ></i>
-          <div
-            className="relative cursor-pointer"
-            onClick={() => navigate("/cart")}
-          >
-            <i className="fa-solid fa-cart-shopping text-gray-700 hover:text-violet-600 text-lg"></i>
-            {cart.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                {cart.length}
-              </span>
-            )}
-          </div>
-          <div
-            className="relative h-full flex items-center px-2 cursor-pointer"
-            onMouseEnter={handleUserEnter}
-            onMouseLeave={handleUserLeave}
-          >
-            <i
-              className={`fa-solid fa-user text-lg transition ${user ? "text-violet-600" : "text-gray-700 hover:text-violet-600"
-                }`}
-            ></i>
-            {userMenuOpen && (
-              <div
-                className="absolute top-10 right-0 bg-white rounded-lg shadow-md py-2 w-48 border border-gray-100 z-50 mt-2"
-                onMouseEnter={handleUserEnter}
-                onMouseLeave={handleUserLeave}
-              >
-                {user ? (
-                  <>
-                    <div className="px-4 py-2 border-b mb-1">
-                      <p className="font-bold text-gray-800 truncate">
-                        {user.name}
-                      </p>
-                    </div>
-                    {user.role === "admin" && (
-                      <div
-                        className="px-4 py-2 hover:bg-violet-50 text-violet-700 cursor-pointer font-semibold"
-                        onClick={() => navigate("/admin")}
-                      >
-                        Trang Admin
-                      </div>
-                    )}
-                    <div
-                      className="px-4 py-2 hover:bg-violet-50 cursor-pointer"
-                      onClick={() => navigate("/profile")}
-                    >
-                      Thông tin
-                    </div>
-                    <div
-                      className="px-4 py-2 hover:bg-red-50 text-red-600 cursor-pointer"
-                      onClick={handleLogout}
-                    >
-                      Đăng xuất
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div
-                      className="px-4 py-2 hover:bg-violet-50 cursor-pointer"
-                      onClick={() => navigate("/login")}
-                    >
-                      Đăng nhập
-                    </div>
-                    <div
-                      className="px-4 py-2 hover:bg-violet-50 cursor-pointer"
-                      onClick={() => navigate("/register")}
-                    >
-                      Đăng ký
-                    </div>
-                  </>
-                )}
               </div>
-            )}
+            ))}
           </div>
+
+          {/* Admin Link Mobile */}
+          {user && user.role === "admin" && (
+            <div className="mt-6 pt-4 border-t">
+              <button
+                onClick={() => { navigate("/admin"); setIsMobileMenuOpen(false); }}
+                className="w-full py-3 bg-gray-800 text-white rounded font-bold"
+              >
+                <i className="fa-solid fa-screwdriver-wrench mr-2"></i> Admin page
+              </button>
+            </div>
+          )}
+
+          {/* Logout Mobile */}
+          {user && (
+            <button
+              onClick={handleLogout}
+              className="w-full py-3 mt-4 text-red-500 border border-red-200 rounded font-bold hover:bg-red-50"
+            >
+              Logout
+            </button>
+          )}
+
         </div>
-      </div>
-    </nav>
+      )}
+    </>
   );
 }

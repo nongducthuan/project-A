@@ -11,7 +11,7 @@ export default function AdminProductDetail() {
   const [product, setProduct] = useState(null);
   const [colors, setColors] = useState([]);
 
-  // State form thêm màu
+  // State form for adding color
   const [newColor, setNewColor] = useState({
     color_name: "",
     color_code: "#000000",
@@ -19,7 +19,7 @@ export default function AdminProductDetail() {
   });
   const [uploadingColor, setUploadingColor] = useState(false);
 
-  // State form thêm size
+  // State form for adding size
   const [selectedColorId, setSelectedColorId] = useState(null);
   const [newSize, setNewSize] = useState({ size: "S", stock: 10 });
   const SIZE_ORDER = [
@@ -45,14 +45,14 @@ export default function AdminProductDetail() {
       const res = await API.get(`/admin/products/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setProduct(null); // 1. Reset về null để ép render lại (Fix lỗi không update)
+      setProduct(null); // 1. Reset to null to force re-render (Fix non-update issue)
       setTimeout(() => {
         const data = res.data;
         setProduct(data);
         if (data.colors) {
-          // Tạo mảng mới để React nhận biết thay đổi
+          // Create new array for React to recognize change
           setColors([...data.colors]);
-          // Nếu đang chọn màu mà màu đó vừa bị xóa hoặc cập nhật, reset selection
+          // If no color is selected but colors exist, select the first one
           if (!selectedColorId && data.colors.length > 0) {
             setSelectedColorId(data.colors[0].id);
           }
@@ -63,7 +63,7 @@ export default function AdminProductDetail() {
     }
   };
 
-  // Upload ảnh cho màu
+  // Upload image for color
   const handleColorFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -76,30 +76,34 @@ export default function AdminProductDetail() {
       });
       setNewColor((prev) => ({ ...prev, image_url: res.data.url }));
     } catch (err) {
-      alert("Lỗi upload");
+      alert("Upload failed");
     } finally {
       setUploadingColor(false);
     }
   };
 
-  // Thêm màu mới
+  // Add new color
   const handleAddColor = async () => {
-    if (!newColor.color_name) return alert("Nhập tên màu");
+    if (!newColor.color_name) return alert("Enter color name");
     try {
-      const res = await API.post(`/admin/products/${id}/colors`, newColor, {
+      await API.post(`/admin/products/${id}/colors`, newColor, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNewColor({ color_name: "", color_code: "#000000", image_url: "" });
       fetchProduct();
-      alert("Đã thêm màu!");
+      alert("Color added successfully!");
     } catch (err) {
-      alert("Lỗi thêm màu");
+      alert("Failed to add color");
     }
   };
 
-  // Xóa màu
+  // Delete color
   const handleDeleteColor = async (colorId) => {
-    if (!window.confirm("Xóa màu này sẽ xóa hết các size trong đó. Tiếp tục?"))
+    if (
+      !window.confirm(
+        "Deleting this color will delete all associated sizes. Continue?"
+      )
+    )
       return;
     try {
       await API.delete(`/admin/colors/${colorId}`, {
@@ -108,27 +112,27 @@ export default function AdminProductDetail() {
       fetchProduct();
       if (selectedColorId === colorId) setSelectedColorId(null);
     } catch (err) {
-      alert("Lỗi xóa màu");
+      alert("Failed to delete color");
     }
   };
 
-  // Thêm size
+  // Add size
   const handleAddSize = async () => {
-    if (!selectedColorId) return alert("Vui lòng chọn một màu trước!");
+    if (!selectedColorId) return alert("Please select a color first!");
 
     const stock = Number(newSize.stock);
     const size = newSize.size?.trim();
 
-    if (!size) return alert("Vui lòng chọn size");
-    if (isNaN(stock) || stock < 0) return alert("Stock không hợp lệ");
+    if (!size) return alert("Please select a size");
+    if (isNaN(stock) || stock < 0) return alert("Invalid stock value");
 
     try {
-      const selectedColor = colors.find(c => c.id === selectedColorId);
-      const existingSize = selectedColor.sizes.find(s => s.size === size);
+      const selectedColor = colors.find((c) => c.id === selectedColorId);
+      const existingSize = selectedColor.sizes.find((s) => s.size === size);
 
       const res = await API.post(
         `/admin/colors/${selectedColorId}/sizes`,
-        { size, stock, increment: true }, // gửi đúng kiểu dữ liệu
+        { size, stock, increment: true }, // Send correct data type
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -137,24 +141,24 @@ export default function AdminProductDetail() {
       if (existingSize) {
         existingSize.stock += stock;
         setColors([...colors]);
-        alert("Đã cộng dồn stock size!");
+        alert("Stock incremented successfully!");
       } else {
         selectedColor.sizes.push({ id: returnedId, size, stock });
         setColors([...colors]);
-        alert("Đã thêm size mới!");
+        alert("New size added successfully!");
       }
 
-      // Reset form về mặc định hợp lệ
+      // Reset form to a valid default
       setNewSize({ size: "S", stock: 0 });
     } catch (err) {
       console.error(err.response?.data || err);
-      alert("Lỗi khi thêm/cập nhật size");
+      alert("Failed to add/update size");
     }
   };
 
-  // Xóa size
+  // Delete size
   const handleDeleteSize = async (sizeId) => {
-    if (!window.confirm("Xóa size này?")) return;
+    if (!window.confirm("Delete this size?")) return;
     try {
       await API.delete(`/admin/sizes/${sizeId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -165,42 +169,43 @@ export default function AdminProductDetail() {
     }
   };
 
-  if (!product) return <div className="p-10 text-center">Đang tải...</div>;
+  if (!product) return <div className="p-10 text-center">Loading...</div>;
 
   const selectedColorObj = colors.find((c) => c.id === selectedColorId);
 
   return (
     <div className="container mx-auto py-8 px-4">
-      {/* Header: Nút quay lại và Tên SP */}
+      {/* Header: Back Button and Product Name */}
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => navigate("/admin/products")}
           className="btn btn-outline-secondary"
         >
-          <i className="fa-solid fa-arrow-left mr-2"></i> Quay lại
+          <i className="fa-solid fa-arrow-left mr-2"></i> Back
         </button>
         <h2 className="text-2xl font-bold uppercase text-gray-800">
-          Quản lý kho: <span className="text-blue-600">{product.name}</span>
+          Inventory Management: <span className="text-blue-600">{product.name}</span>
         </h2>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* CỘT TRÁI: DANH SÁCH MÀU (3/12) */}
+        {/* LEFT COLUMN: COLOR LIST (4/12) */}
         <div className="lg:col-span-4 bg-white p-4 shadow rounded-lg border h-fit">
           <h4 className="font-bold text-lg border-b pb-2 mb-4">
-            1. Danh sách Màu
+            1. Color List
           </h4>
 
-          {/* List Màu hiện có */}
+          {/* List of existing Colors */}
           <div className="space-y-2 mb-6">
             {colors.map((c) => (
               <div
                 key={c.id}
                 onClick={() => setSelectedColorId(c.id)}
-                className={`p-2 rounded border flex items-center justify-between cursor-pointer transition ${selectedColorId === c.id
-                  ? "bg-blue-50 border-blue-500 ring-1 ring-blue-500"
-                  : "hover:bg-gray-50"
-                  }`}
+                className={`p-2 rounded border flex items-center justify-between cursor-pointer transition ${
+                  selectedColorId === c.id
+                    ? "bg-blue-50 border-blue-500 ring-1 ring-blue-500"
+                    : "hover:bg-gray-50"
+                }`}
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded border bg-gray-100 overflow-hidden">
@@ -241,19 +246,19 @@ export default function AdminProductDetail() {
             ))}
             {colors.length === 0 && (
               <p className="text-sm text-gray-400 italic text-center">
-                Chưa có màu nào. Hãy thêm mới.
+                No colors found. Please add a new one.
               </p>
             )}
           </div>
 
-          {/* Form Thêm Màu */}
+          {/* Add New Color Form */}
           <div className="bg-gray-50 p-3 rounded border">
             <h5 className="font-bold text-sm mb-2 text-gray-700">
-              + Thêm Màu Mới
+              + Add New Color
             </h5>
             <input
               className="form-control mb-2 text-sm"
-              placeholder="Tên màu (VD: Trắng)"
+              placeholder="Color Name (e.g., White)"
               value={newColor.color_name}
               onChange={(e) =>
                 setNewColor({ ...newColor, color_name: e.target.value })
@@ -267,9 +272,9 @@ export default function AdminProductDetail() {
                 onChange={(e) =>
                   setNewColor({ ...newColor, color_code: e.target.value })
                 }
-                title="Chọn mã màu"
+                title="Select color code"
               />
-              <span className="text-xs text-gray-500">Mã màu</span>
+              <span className="text-xs text-gray-500">Color Code</span>
             </div>
             <input
               type="file"
@@ -278,28 +283,28 @@ export default function AdminProductDetail() {
             />
             <input
               className="form-control mb-2 text-xs"
-              placeholder="Link ảnh (nếu có)..."
+              placeholder="Image link (if any)..."
               value={newColor.image_url}
               onChange={(e) =>
                 setNewColor({ ...newColor, image_url: e.target.value })
               }
             />
             {uploadingColor && (
-              <p className="text-xs text-blue-500 mb-2">Đang tải ảnh...</p>
+              <p className="text-xs text-blue-500 mb-2">Uploading image...</p>
             )}
             <button
               onClick={handleAddColor}
               className="btn btn-dark btn-sm w-full"
             >
-              Thêm Màu
+              Add Color
             </button>
           </div>
         </div>
 
-        {/* CỘT PHẢI: QUẢN LÝ SIZE (9/12) */}
+        {/* RIGHT COLUMN: SIZE MANAGEMENT (8/12) */}
         <div className="lg:col-span-8 bg-white p-6 shadow rounded-lg border min-h-[500px]">
           <h4 className="font-bold text-lg border-b pb-2 mb-4">
-            2. Quản lý Size & Tồn kho
+            2. Manage Size & Stock
           </h4>
 
           {selectedColorObj ? (
@@ -313,32 +318,33 @@ export default function AdminProductDetail() {
                   }
                   className="w-20 h-20 object-cover rounded bg-white border"
                   onError={(e) =>
-                  (e.target.src =
-                    "http://localhost:5000/public/placeholder.jpg")
+                    (e.target.src =
+                      "http://localhost:5000/public/placeholder.jpg")
                   }
                 />
                 <div>
                   <h5 className="font-bold text-xl text-blue-800">
-                    Màu đang chọn: {selectedColorObj.color_name}
+                    Selected Color: {selectedColorObj.color_name}
                   </h5>
                   <p className="text-sm text-gray-600">
-                    Quản lý số lượng tồn kho cho từng size của màu này.
+                    Manage inventory stock quantity for each size of this color.
                   </p>
                 </div>
               </div>
 
-              {/* Bảng Size */}
+              {/* Size Table */}
               <div className="mb-6">
                 <table className="table table-hover align-middle">
                   <thead className="table-light">
                     <tr>
                       <th>Size</th>
-                      <th>Tồn kho hiện tại</th>
-                      <th className="text-end">Hành động</th>
+                      <th>Current Stock</th>
+                      <th className="text-end">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedColorObj.sizes && selectedColorObj.sizes.length > 0 ? (
+                    {selectedColorObj.sizes &&
+                    selectedColorObj.sizes.length > 0 ? (
                       [...selectedColorObj.sizes]
                         .sort(
                           (a, b) =>
@@ -347,15 +353,19 @@ export default function AdminProductDetail() {
                         .map((s) => (
                           <tr key={s.id}>
                             <td>
-                              <span className="badge bg-secondary text-lg">{s.size}</span>
+                              <span className="badge bg-secondary text-lg">
+                                {s.size}
+                              </span>
                             </td>
-                            <td className="font-bold text-success text-lg">{s.stock}</td>
+                            <td className="font-bold text-success text-lg">
+                              {s.stock}
+                            </td>
                             <td className="text-end">
                               <button
                                 onClick={() => handleDeleteSize(s.id)}
                                 className="btn btn-outline-danger btn-sm"
                               >
-                                <i className="fa-solid fa-trash"></i> Xóa
+                                <i className="fa-solid fa-trash"></i> Delete
                               </button>
                             </td>
                           </tr>
@@ -363,7 +373,7 @@ export default function AdminProductDetail() {
                     ) : (
                       <tr>
                         <td colSpan="3" className="text-center text-gray-400 py-4">
-                          Chưa có size nào cho màu này.
+                          No sizes available for this color.
                         </td>
                       </tr>
                     )}
@@ -371,9 +381,9 @@ export default function AdminProductDetail() {
                 </table>
               </div>
 
-              {/* Form Thêm Size */}
+              {/* Add New Size Form */}
               <div className="bg-gray-50 p-4 rounded border max-w-md">
-                <h5 className="font-bold text-sm mb-3">Thêm Size Mới</h5>
+                <h5 className="font-bold text-sm mb-3">Add New Size</h5>
                 <div className="flex gap-3">
                   <div className="flex-1">
                     <label className="text-xs font-bold mb-1 block">Size</label>
@@ -405,7 +415,7 @@ export default function AdminProductDetail() {
                   </div>
                   <div className="flex-1">
                     <label className="text-xs font-bold mb-1 block">
-                      Số lượng
+                      Quantity
                     </label>
                     <input
                       type="number"
@@ -421,7 +431,7 @@ export default function AdminProductDetail() {
                       onClick={handleAddSize}
                       className="btn btn-success font-bold"
                     >
-                      <i className="fa-solid fa-plus"></i> Thêm
+                      <i className="fa-solid fa-plus"></i> Add
                     </button>
                   </div>
                 </div>
@@ -431,8 +441,7 @@ export default function AdminProductDetail() {
             <div className="h-full flex flex-col items-center justify-center text-gray-400">
               <i className="fa-solid fa-arrow-left fa-3x mb-4 opacity-30"></i>
               <p className="text-lg">
-                Vui lòng chọn một <strong>Màu</strong> ở cột bên trái để quản lý
-                Size.
+                Please select a <strong>Color</strong> from the left column to manage Sizes.
               </p>
             </div>
           )}

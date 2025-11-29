@@ -1,7 +1,7 @@
 const db = require("../db");
 const orderModel = require("../models/orderModel");
 
-// Tạo đơn hàng mới
+// Create new order
 async function createOrderController(req, res) {
   const connection = await db.getConnection();
   try {
@@ -11,15 +11,15 @@ async function createOrderController(req, res) {
 
     // VALIDATION
     if (!address || !items || items.length === 0) {
-      return res.status(400).json({ message: "Dữ liệu không hợp lệ" });
+      return res.status(400).json({ message: "Invalid data" }); // Changed
     }
 
-    // Nếu là guest (user_id=null) → bắt buộc name + phone
+    // If it's a guest (user_id=null) → name + phone are required
     if (!user_id) {
       if (!name || !phone) {
         return res
           .status(400)
-          .json({ message: "Guest phải cung cấp name và phone" });
+          .json({ message: "Guest must provide name and phone" }); // Changed
       }
     }
 
@@ -35,12 +35,12 @@ async function createOrderController(req, res) {
     await orderModel.addOrderItems(connection, orderId, items);
 
     await connection.commit();
-    res.status(201).json({ message: "Đã tạo đơn hàng thành công", orderId });
+    res.status(201).json({ message: "Order created successfully", orderId }); // Changed
 
   } catch (error) {
     await connection.rollback();
     res.status(500).json({
-      message: "Lỗi khi tạo đơn hàng",
+      message: "Error creating order", // Changed
       error: error.message,
     });
   } finally {
@@ -48,15 +48,15 @@ async function createOrderController(req, res) {
   }
 }
 
-// Lấy danh sách đơn hàng (Của người dùng đang đăng nhập)
+// Get order list (For the currently logged-in user)
 async function getOrders(req, res) {
   try {
-    const userId = req.user.id; // Lấy từ token (authMiddleware)
+    const userId = req.user.id; // Get from token (authMiddleware)
     const orders = await orderModel.getOrdersByUserId(userId);
     res.json(orders);
   } catch (error) {
     console.error("Get orders error:", error);
-    res.status(500).json({ message: "Lỗi lấy danh sách đơn hàng" });
+    res.status(500).json({ message: "Error fetching order list" }); // Changed
   }
 }
 
@@ -66,9 +66,9 @@ async function changeOrderStatus(req, res) {
 
     await orderModel.changeOrderStatus(order_id, new_status);
 
-    res.json({ message: "Cập nhật trạng thái thành công" });
+    res.json({ message: "Status updated successfully" }); // Changed
   } catch (err) {
-    res.status(500).json({ message: "Lỗi cập nhật trạng thái", error: err.message });
+    res.status(500).json({ message: "Error updating status", error: err.message }); // Changed
   }
 }
 

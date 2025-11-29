@@ -28,11 +28,21 @@
 
 html,
 body {
-  padding-top: 25px;
+  padding-top: 35px;
   background-color: var(--color-bg) !important;
 }
 
-@media (min-width: 769px) {
+.carousel img {
+  position: relative;
+  height: 100%;
+}
+
+.carousel-caption {
+  position: absolute;
+  height: 75%;
+}
+
+@media (min-width: 768px) {
 
   html,
   body {
@@ -40,6 +50,10 @@ body {
   }
 
   .carousel img {
-    height: 100vh;
+    height: 100%;
+  }
+
+  .carousel-caption {
+    height: 50%;
   }
 }

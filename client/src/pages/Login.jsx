@@ -7,62 +7,71 @@ export default function Login() {
   const [form, setForm] = useState({ identifier: "", password: "" });
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  // Destructure setUser function from AuthContext to update the global state
   const { setUser } = useContext(AuthContext);
 
+  // Handle form input changes
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // Handle form submission (Login logic)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError(""); // Clear previous errors
 
     try {
+      // Send login request to the backend API
       const res = await API.post("/auth/login", form);
       const { user, token } = res.data;
 
       if (!user || !token) {
-        setError("Phản hồi từ server không hợp lệ!");
+        setError("Invalid response from server!");
         return;
       }
 
+      // Store user and token locally for persistence
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token", token);
+      
+      // Update global authentication state
       setUser(user);
 
+      // Redirect based on user role
       if (user.role === "admin") navigate("/admin");
       else navigate("/");
     } catch (err) {
-      setError("Sai email/SĐT hoặc mật khẩu!");
+      // Display generic error message for security
+      setError("Incorrect email/phone number or password!");
     }
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-8 sm:p-10 border border-gray-100">
-        {/* Tiêu đề */}
+        {/* Title */}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-            Đăng nhập
+            Sign In
           </h1>
           <p className="mt-2 text-base text-gray-500">
-            Chào mừng bạn quay lại!
+            Welcome back!
           </p>
         </div>
 
-        {/* Form Login */}
+        {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Identifier */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email hoặc Số điện thoại
+              Email or Phone Number
             </label>
             <input
               type="text"
               name="identifier"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm
               focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out"
-              placeholder="Nhập email hoặc SĐT"
+              placeholder="Enter email or phone number"
               value={form.identifier}
               onChange={handleChange}
               required
@@ -72,14 +81,14 @@ export default function Login() {
           {/* Password */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mật khẩu
+              Password
             </label>
             <input
               type="password"
               name="password"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm
               focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out"
-              placeholder="Nhập mật khẩu"
+              placeholder="Enter your password"
               value={form.password}
               onChange={handleChange}
               required
@@ -91,17 +100,17 @@ export default function Login() {
             <button
               type="submit"
               className="w-full flex justify-center py-3 px-4 border border-transparent
-    rounded-lg shadow-sm text-lg font-semibold text-white
-    bg-violet-600 hover:bg-violet-700
-    focus:outline-none focus:ring-2 focus:ring-offset-2
-    focus:ring-gray-500 transition duration-150 ease-in-out"
+              rounded-lg shadow-sm text-lg font-semibold text-white
+              bg-violet-600 hover:bg-violet-700
+              focus:outline-none focus:ring-2 focus:ring-offset-2
+              focus:ring-gray-500 transition duration-150 ease-in-out"
             >
-              Đăng nhập
+              Sign In
             </button>
           </div>
         </form>
 
-        {/* Lỗi */}
+        {/* Error message */}
         {error && (
           <div
             className="bg-red-100 border border-red-400 text-red-700 px-4 py-3
@@ -112,15 +121,15 @@ export default function Login() {
           </div>
         )}
 
-        {/* Link đăng ký */}
+        {/* Registration Link */}
         <div className="text-center mt-6 pt-4 border-t border-gray-200">
           <p className="text-sm text-gray-600">
-            Chưa có tài khoản?
+            Don't have an account?
             <Link
               to="/register"
               className="ml-1 font-semibold text-indigo-600 hover:text-indigo-500"
             >
-              Đăng ký ngay
+              Register now
             </Link>
           </p>
         </div>

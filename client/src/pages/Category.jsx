@@ -3,11 +3,11 @@ import { useEffect, useState } from "react";
 import ProductCard from "../components/ProductCard";
 import API from "../api";
 
-const ITEMS_PER_PAGE = 4;
+const ITEMS_PER_PAGE = 8;
 
 export default function CategoryPage() {
   const { id } = useParams();
-  const location = useLocation(); // ⭐ QUAN TRỌNG: theo dõi thay đổi ?gender=xxx
+  const location = useLocation(); // ⭐ IMPORTANT: track changes in ?gender=xxx
   const [searchParams] = useSearchParams();
 
   const rawGender = searchParams.get("gender");
@@ -16,13 +16,13 @@ export default function CategoryPage() {
     : null;
 
   const [products, setProducts] = useState([]);
-  const [categoryName, setCategoryName] = useState("Đang tải...");
+  const [categoryName, setCategoryName] = useState("Loading...");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ⭐ QUAN TRỌNG: Load lại mỗi khi id, gender hoặc page thay đổi
+  // ⭐ IMPORTANT: Reload whenever id, gender, or page changes
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -55,15 +55,15 @@ export default function CategoryPage() {
 
         const currentCat = catList.find((c) => String(c.id) === String(id));
 
-        let title = currentCat ? currentCat.name : "Danh mục sản phẩm";
-        if (gender === "male") title += " (Nam)";
-        if (gender === "female") title += " (Nữ)";
+        let title = currentCat ? currentCat.name : "Product Category";
+        if (gender === "male") title += " (Men)";
+        if (gender === "female") title += " (Women)";
         if (gender === "unisex") title += " (Unisex)";
 
         setCategoryName(title);
       } catch (err) {
-        console.error("❌ Lỗi tải dữ liệu:", err);
-        setError("Không thể tải dữ liệu. Vui lòng kiểm tra kết nối.");
+        console.error("❌ Error loading data:", err);
+        setError("Unable to load data. Please check your connection.");
         setProducts([]);
       } finally {
         setIsLoading(false);
@@ -73,7 +73,7 @@ export default function CategoryPage() {
 
     fetchData();
   }, [id, gender, currentPage, location.search]);
-  // ⭐⭐ FIX LỚN: thêm location.search để re-run khi query đổi
+  // ⭐⭐ MAJOR FIX: added location.search to re-run when query changes
 
   const handleNextPage = () => {
     if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
@@ -107,7 +107,7 @@ export default function CategoryPage() {
           onClick={() => window.location.reload()}
           className="px-4 py-2 bg-gray-200 rounded text-gray-800 hover:bg-gray-300"
         >
-          Tải lại trang
+          Reload Page
         </button>
       </div>
     );
@@ -120,18 +120,18 @@ export default function CategoryPage() {
           {categoryName}
         </h2>
         <span className="text-gray-500 mt-2 md:mt-0">
-          {products.length} sản phẩm hiện có
+          {products.length} products available
         </span>
       </div>
 
       {products.length === 0 ? (
         <div className="text-center py-16 bg-gray-50 rounded-lg">
-          <p className="text-gray-500 text-lg">Chưa có sản phẩm nào phù hợp.</p>
+          <p className="text-gray-500 text-lg">No matching products found.</p>
           <button
             onClick={() => window.history.back()}
             className="mt-4 text-blue-600 hover:underline"
           >
-            &larr; Quay lại
+            &larr; Go Back
           </button>
         </div>
       ) : (
@@ -151,11 +151,11 @@ export default function CategoryPage() {
                   : "hover:bg-gray-50 text-gray-700"
                 }`}
             >
-              &larr; Trước
+              &larr; Previous
             </button>
 
             <span className="font-medium text-gray-700">
-              Trang {currentPage} / {totalPages}
+              Page {currentPage} / {totalPages}
             </span>
 
             <button
@@ -166,7 +166,7 @@ export default function CategoryPage() {
                   : "hover:bg-gray-50 text-gray-700"
                 }`}
             >
-              Sau &rarr;
+              Next &rarr;
             </button>
           </div>
         </>

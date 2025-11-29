@@ -4,12 +4,9 @@ const {
   getRepresentative,
   getProducts,
   getProductOptions,
-  getProduct, // Dùng hàm này (đã viết trong productController)
+  getProduct, 
   searchProducts,
 } = require("../controllers/productController");
-
-// ❌ Bỏ dòng này nếu không cần thiết nữa, để tránh xung đột code cũ
-// const { getProductDetail } = require("../controllers/productDetailController");
 
 // ==================================================
 

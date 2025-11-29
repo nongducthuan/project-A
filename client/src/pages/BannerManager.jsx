@@ -6,7 +6,7 @@ export default function BannerManager() {
   const token = localStorage.getItem("token");
   const [banners, setBanners] = useState([]);
   const [uploading, setUploading] = useState(false);
-  const [form, setForm] = useState({ image_url: "", title: "", subtitle: "" });
+  const [form, setForm] = useState({ imageUrl: "", title: "", subtitle: "" });
   const [editingId, setEditingId] = useState(null);
 
   const fetchBanners = async () => {
@@ -14,7 +14,11 @@ export default function BannerManager() {
       const res = await API.get("/admin/banners", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setBanners(Array.isArray(res.data) ? res.data : []);
+      // Assuming the API returns image_url as imageUrl in the component's state
+      const mappedBanners = Array.isArray(res.data) 
+        ? res.data.map(b => ({ ...b, imageUrl: b.image_url || b.imageUrl })) 
+        : [];
+      setBanners(mappedBanners);
     } catch (err) {
       console.error(err);
     }
@@ -34,9 +38,9 @@ export default function BannerManager() {
       const res = await API.post("/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      setForm((prev) => ({ ...prev, image_url: res.data.url }));
+      setForm((prev) => ({ ...prev, imageUrl: res.data.url }));
     } catch (err) {
-      alert("Lỗi upload ảnh");
+      alert("Image upload failed");
     } finally {
       setUploading(false);
     }
@@ -45,55 +49,58 @@ export default function BannerManager() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = { ...form, image_url: form.imageUrl }; // Map back to snake_case for API
+      
       const endpoint = editingId
         ? `/admin/banners/${editingId}`
         : "/admin/banners";
       const method = editingId ? API.put : API.post;
-      await method(endpoint, form, {
+      
+      await method(endpoint, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setForm({ image_url: "", title: "", subtitle: "" });
+      setForm({ imageUrl: "", title: "", subtitle: "" });
       setEditingId(null);
       fetchBanners();
-      alert("Thành công!");
+      alert("Success!");
     } catch (err) {
-      alert("Lỗi lưu banner!");
+      alert("Failed to save banner!");
     }
   };
 
   const handleEdit = (b) => {
-    setForm({ image_url: b.image_url, title: b.title, subtitle: b.subtitle });
+    setForm({ imageUrl: b.image_url, title: b.title, subtitle: b.subtitle });
     setEditingId(b.id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Xóa banner này?")) return;
+    if (!window.confirm("Delete this banner?")) return;
     try {
       await API.delete(`/admin/banners/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchBanners();
     } catch (err) {
-      alert("Lỗi xóa!");
+      alert("Delete failed!");
     }
   };
 
   return (
     <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold mb-6 uppercase text-gray-800 border-b pb-2">
-        Quản lý Banner
+        Banner Management
       </h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* FORM */}
         <div className="lg:col-span-4 bg-white p-6 rounded-lg shadow-lg sticky top-24 border border-gray-200">
           <h3 className="font-bold text-lg mb-4 text-violet-600 border-b pb-2">
-            {editingId ? "Sửa Banner" : "Thêm Banner"}
+            {editingId ? "Edit Banner" : "Add New Banner"}
           </h3>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="font-bold text-sm">Tiêu đề</label>
+              <label className="font-bold text-sm">Title</label>
               <input
                 className="form-control"
                 value={form.title}
@@ -101,7 +108,7 @@ export default function BannerManager() {
               />
             </div>
             <div>
-              <label className="font-bold text-sm">Phụ đề</label>
+              <label className="font-bold text-sm">Subtitle</label>
               <input
                 className="form-control"
                 value={form.subtitle}
@@ -111,7 +118,7 @@ export default function BannerManager() {
 
             {/* Upload */}
             <div>
-              <label className="font-bold text-sm mb-1">Hình ảnh</label>
+              <label className="font-bold text-sm mb-1">Image</label>
               <input
                 type="file"
                 className="form-control mb-2"
@@ -120,21 +127,21 @@ export default function BannerManager() {
               />
               <input
                 className="form-control text-sm"
-                value={form.image_url}
+                value={form.imageUrl}
                 onChange={(e) =>
-                  setForm({ ...form, image_url: e.target.value })
+                  setForm({ ...form, imageUrl: e.target.value })
                 }
-                placeholder="Hoặc link online..."
+                placeholder="Or online link..."
               />
               {uploading && (
                 <p className="text-xs text-blue-500">Uploading...</p>
               )}
-              {form.image_url && (
+              {form.imageUrl && (
                 <img
                   src={
-                    form.image_url.startsWith("http")
-                      ? form.image_url
-                      : `${backendUrl}${form.image_url}`
+                    form.imageUrl.startsWith("http")
+                      ? form.imageUrl
+                      : `${backendUrl}${form.imageUrl}`
                   }
                   className="mt-2 w-full h-32 object-cover rounded border"
                 />
@@ -150,18 +157,18 @@ export default function BannerManager() {
                     : "bg-violet-600 text-white border-violet-600 hover:bg-violet-700 hover:border-violet-700"
                 }`}
               >
-                {editingId ? "Cập nhật" : "Thêm mới"}
+                {editingId ? "Update" : "Add New"}
               </button>
               {editingId && (
                 <button
                   type="button"
                   onClick={() => {
                     setEditingId(null);
-                    setForm({ image_url: "", title: "", subtitle: "" });
+                    setForm({ imageUrl: "", title: "", subtitle: "" });
                   }}
                   className="btn btn-secondary"
                 >
-                  Hủy
+                  Cancel
                 </button>
               )}
             </div>

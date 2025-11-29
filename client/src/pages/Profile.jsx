@@ -10,13 +10,16 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState("orders"); // orders | info
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  // Initialize phone state from user object
   const [phone, setPhone] = useState(user?.phone || "");
 
   useEffect(() => {
+    // Redirect to login if user is not authenticated
     if (!user) {
       navigate("/login");
       return;
     }
+    // Fetch orders only when the 'orders' tab is active
     if (activeTab === "orders") {
       fetchOrders();
     }
@@ -38,15 +41,17 @@ export default function Profile() {
   };
 
   const handleLogout = () => {
+    // Clear local storage and context state
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
     navigate("/login");
   };
 
+  // Format currency to VND
   const formatCurrency = (val) => Number(val).toLocaleString("vi-VN") + "đ";
 
-  // CSS cho Tab
+  // CSS for Tab
   const tabClass = (tabName) =>
     `px-6 py-3 font-bold cursor-pointer transition-all border-b-2 ${
       activeTab === tabName
@@ -54,14 +59,14 @@ export default function Profile() {
         : "border-transparent text-gray-500 hover:text-black"
     }`;
 
-  // CSS cho Badge trạng thái
+  // CSS for status Badge
   const getStatusBadge = (status) => {
     const colors = {
-      "Chờ xác nhận": "bg-yellow-100 text-yellow-800",
-      "Đã xác nhận": "bg-blue-100 text-blue-800",
-      "Đang giao hàng": "bg-purple-100 text-purple-800",
-      "Đã giao hàng": "bg-green-100 text-green-800",
-      "Đã hủy": "bg-red-100 text-red-800",
+      "Chờ xác nhận": "bg-yellow-100 text-yellow-800", // Pending Confirmation
+      "Đã xác nhận": "bg-blue-100 text-blue-800", // Confirmed
+      "Đang giao hàng": "bg-purple-100 text-purple-800", // Delivering
+      "Đã giao hàng": "bg-green-100 text-green-800", // Delivered
+      "Đã hủy": "bg-red-100 text-red-800", // Cancelled
     };
     return (
       <span
@@ -75,15 +80,15 @@ export default function Profile() {
   };
 
   const handleUpdateProfile = async () => {
-    // 🔍 Kiểm tra số điện thoại 10 số
+    // 🔍 Validate phone number (10 digits)
     if (!/^\d{10}$/.test(phone)) {
       Swal.fire({
         icon: "warning",
-        title: "Số điện thoại chưa hợp lệ",
-        text: "Vui lòng nhập đúng 10 số.",
-        confirmButtonText: "Đã hiểu",
+        title: "Invalid Phone Number",
+        text: "Please enter a valid 10-digit phone number.",
+        confirmButtonText: "Got it",
       });
-      return; // ⛔ Dừng lại, không gọi API
+      return; // ⛔ Stop, do not call API
     }
 
     try {
@@ -97,30 +102,32 @@ export default function Profile() {
         }
       );
 
+      // Update user in context and local storage
       const updatedUser = { ...user, phone };
       setUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      // 🎉 Thông báo thành công
+      // 🎉 Success notification
       Swal.fire({
         icon: "success",
-        title: "Cập nhật thành công!",
-        text: "Thông tin của bạn đã được lưu.",
+        title: "Update Successful!",
+        text: "Your information has been saved.",
         timer: 2000,
         showConfirmButton: false,
       });
     } catch (err) {
       console.error(err);
 
-      // ❌ Thông báo lỗi
+      // ❌ Error notification
       Swal.fire({
         icon: "error",
-        title: "Cập nhật thất bại",
-        text: err.response?.data?.message || "Đã xảy ra lỗi, vui lòng thử lại.",
+        title: "Update Failed",
+        text: err.response?.data?.message || "An error occurred, please try again.",
       });
     }
   };
 
+  // If user is null (e.g., during redirection), render nothing
   if (!user) return null;
 
   return (
@@ -135,9 +142,9 @@ export default function Profile() {
             <h2 className="text-2xl font-bold text-gray-900">{user.name}</h2>
             <p className="text-gray-500">{user.email}</p>
             <p className="text-sm text-gray-400 mt-1">
-              Thành viên từ:{" "}
+              Member since:{" "}
               {new Date(user.created_at || Date.now()).toLocaleDateString(
-                "vi-VN"
+                "en-US" // Changed locale for English formatting
               )}
             </p>
           </div>
@@ -145,7 +152,7 @@ export default function Profile() {
             onClick={handleLogout}
             className="btn btn-outline-danger px-4 py-2 rounded-full font-bold"
           >
-            <i className="fa-solid fa-right-from-bracket mr-2"></i> Đăng xuất
+            <i className="fa-solid fa-right-from-bracket mr-2"></i> Log out
           </button>
         </div>
 
@@ -155,36 +162,36 @@ export default function Profile() {
             className={tabClass("orders")}
             onClick={() => setActiveTab("orders")}
           >
-            Lịch sử đơn hàng
+            Order History
           </div>
           <div
             className={tabClass("info")}
             onClick={() => setActiveTab("info")}
           >
-            Thông tin tài khoản
+            Account Information
           </div>
         </div>
 
         {/* Content Area */}
         <div className="p-6 min-h-[400px]">
-          {/* TAB 1: ĐƠN HÀNG */}
+          {/* TAB 1: ORDERS */}
           {activeTab === "orders" && (
             <div>
               <h3 className="text-lg font-bold mb-4 uppercase text-gray-700">
-                Đơn hàng của bạn
+                Your Orders
               </h3>
               {loadingOrders ? (
                 <div className="text-center py-10 text-gray-500">
-                  Đang tải...
+                  Loading...
                 </div>
               ) : orders.length === 0 ? (
                 <div className="text-center py-16 bg-gray-50 rounded border border-dashed">
-                  <p className="text-gray-500">Bạn chưa có đơn hàng nào.</p>
+                  <p className="text-gray-500">You have no orders yet.</p>
                   <button
                     onClick={() => navigate("/")}
                     className="mt-3 text-violet-600 font-bold hover:underline"
                   >
-                    Mua sắm ngay
+                    Start Shopping
                   </button>
                 </div>
               ) : (
@@ -201,7 +208,7 @@ export default function Profile() {
                           </span>
                           <span className="text-sm text-gray-500">
                             {new Date(order.created_at).toLocaleDateString(
-                              "vi-VN"
+                              "en-US" // Changed locale
                             )}
                           </span>
                         </div>
@@ -244,10 +251,10 @@ export default function Profile() {
 
                       <div className="flex justify-between items-center mt-4 pt-3 border-t border-dashed">
                         <span className="text-sm text-gray-500">
-                          Địa chỉ: {order.address}
+                          Address: {order.address}
                         </span>
                         <div className="text-lg">
-                          Tổng tiền:{" "}
+                          Total Price:{" "}
                           <span className="text-red-600 font-bold">
                             {formatCurrency(order.total_price)}
                           </span>
@@ -260,16 +267,16 @@ export default function Profile() {
             </div>
           )}
 
-          {/* TAB 2: THÔNG TIN */}
+          {/* TAB 2: INFO */}
           {activeTab === "info" && (
             <div className="max-w-lg">
               <h3 className="text-lg font-bold mb-6 uppercase text-gray-700">
-                Cập nhật thông tin
+                Update Information
               </h3>
               <form className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">
-                    Họ và tên
+                    Full Name
                   </label>
                   <input
                     type="text"
@@ -291,9 +298,9 @@ export default function Profile() {
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">
-                    Số điện thoại
+                    Phone Number
                   </label>
-                  {/* Sửa input để nhận giá trị từ state và onChange */}
+                  {/* Changed input to be controlled by state */}
                   <input
                     type="text"
                     className="form-control"
@@ -301,13 +308,13 @@ export default function Profile() {
                     onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
-                {/* Thêm sự kiện onClick */}
+                {/* Added onClick event handler */}
                 <button
                   type="button"
                   onClick={handleUpdateProfile}
                   className="btn bg-violet-600 text-white mt-2 hover:bg-violet-700"
                 >
-                  Lưu thay đổi
+                  Save Changes
                 </button>
               </form>
             </div>

@@ -5,7 +5,7 @@ async function createOrder(conn, userId, totalPrice, address, phone, name) {
   const [result] = await conn.query(
     `INSERT INTO orders 
      (user_id, total_price, address, phone, name, status, created_at)
-     VALUES (?, ?, ?, ?, ?, 'Chờ xác nhận', NOW())`,
+     VALUES (?, ?, ?, ?, ?, 'Pending', NOW())`,
     [userId, totalPrice, address, phone, name]
   );
   return result.insertId;
@@ -70,11 +70,10 @@ async function changeOrderStatus(orderId, newStatus) {
     const [items] = await connection.query("SELECT * FROM order_items WHERE order_id=?", [orderId]);
 
     // Nhóm trạng thái
-    const group1 = ["Chờ xác nhận", "Đã hủy"];
-    const group2 = ["Đã xác nhận", "Đang giao hàng", "Đã giao hàng"];
+    const group = ["Pending", "Cancelled"];
 
-    const oldGroup = group1.includes(order.status) ? 1 : 2;
-    const newGroup = group1.includes(newStatus) ? 1 : 2;
+    const oldGroup = group.includes(order.status) ? 1 : 2;
+    const newGroup = group.includes(newStatus) ? 1 : 2;
 
     // Nếu chuyển nhóm 1 → nhóm 2 → trừ kho
     if (oldGroup === 1 && newGroup === 2) {

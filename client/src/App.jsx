@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Cart from "./pages/Cart";
@@ -15,10 +16,12 @@ import Search from "./pages/Search";
 import ProductDetail from "./pages/ProductDetail";
 import AdminProductDetail from "./pages/AdminProductDetail";
 import Category from "./pages/Category";
-// === Manager === //
+
+// === Manager Pages ===
 import BannerManager from "./pages/BannerManager";
 import ProductManager from "./pages/ProductManager";
 import OrderManager from "./pages/OrderManager";
+import CategoryManager from "./pages/CategoryManager";  // <-- FIX IMPORT
 
 import AdminReport from "./pages/AdminReport";
 import Profile from "./pages/Profile";
@@ -31,8 +34,9 @@ function App() {
       <CartProvider>
         <BrowserRouter>
           <Navbar />
+
           <Routes>
-            {/* --- TRANG PUBLIC --- */}
+            {/* --- PUBLIC --- */}
             <Route path="/" element={<Home />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/category/:id" element={<Category />} />
@@ -41,14 +45,12 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/search" element={<Search />} />
 
-            {/* --- TRANG CẦN ĐĂNG NHẬP --- */}
+            {/* --- AUTH REQUIRED --- */}
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/orders" element={<Order />} />
-
-            {/* ✅ Thêm Route Profile tại đây */}
             <Route path="/profile" element={<Profile />} />
 
-            {/* --- TRANG ADMIN --- */}
+            {/* --- ADMIN --- */}
             <Route
               path="/admin"
               element={
@@ -103,6 +105,14 @@ function App() {
               }
             />
 
+            <Route
+              path="/admin/categories"
+              element={
+                <ProtectedRoute roleRequired="admin">
+                  <CategoryManager />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </BrowserRouter>
       </CartProvider>

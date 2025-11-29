@@ -1,160 +1,177 @@
 import { Chart } from "react-google-charts";
 
 export default function AdminReport() {
-  // ======= Dữ liệu giả =======
-  const weeklyOrders = 12;
-  const monthlyOrders = 48;
-  const weeklyRevenue = 35000000; // chục triệu
-  const monthlyRevenue = 120000000;
-  const productsSoldWeek = 35;
-  const productsSoldMonth = 120;
+  const weeklyOrders = 85;
+  const monthlyOrders = 320;
+  const weeklyRevenue = 145000000; 
+  const monthlyRevenue = 630000000;
+  const productsSoldWeek = 210;
+  const productsSoldMonth = 890;
 
-  // ======= Dữ liệu biểu đồ tuần =======
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  };
+
   const comboChartWeekData = [
-    ["Ngày", "Sản phẩm bán", "Đơn hàng"],
-    ["Thứ 2", 5, 2],
-    ["Thứ 3", 6, 3],
-    ["Thứ 4", 7, 4],
-    ["Thứ 5", 4, 2],
-    ["Thứ 6", 8, 5],
-    ["Thứ 7", 5, 3],
-    ["CN", 6, 4],
+    ["Day", "Products Sold", "Orders"],
+    ["Mon", 32, 12],
+    ["Tue", 28, 10],
+    ["Wed", 35, 14],
+    ["Thu", 25, 9],
+    ["Fri", 40, 15],
+    ["Sat", 30, 12],
+    ["Sun", 20, 8],
   ];
+
   const comboChartWeekOptions = {
-    title: "Thống kê tuần này",
-    vAxis: { title: "Số lượng" },
-    hAxis: { title: "Ngày trong tuần" },
+    title: "This Week's Statistics",
+    vAxis: { title: "Quantity" },
+    hAxis: { title: "Day of the Week" },
     seriesType: "bars",
     legend: { position: "bottom" },
-    chartArea: { width: "80%", height: "70%" }, // chart gọn hơn
+    chartArea: { width: "80%", height: "70%" },
   };
 
   const lineChartWeekData = [
-    ["Ngày", "Doanh thu"],
-    ["Thứ 2", 5000000],
-    ["Thứ 3", 4000000],
-    ["Thứ 4", 6000000],
-    ["Thứ 5", 3000000],
-    ["Thứ 6", 7000000],
-    ["Thứ 7", 5500000],
-    ["CN", 4500000],
+    ["Day", "Revenue"],
+    ["Mon", 25000000],
+    ["Tue", 21000000],
+    ["Wed", 30000000],
+    ["Thu", 18000000],
+    ["Fri", 35000000],
+    ["Sat", 23000000],
+    ["Sun", 13000000],
   ];
+
   const lineChartWeekOptions = {
-    title: "Doanh thu tuần (VNĐ)",
-    hAxis: { title: "Ngày" },
-    vAxis: { title: "Doanh thu" },
+    title: "Weekly Revenue (VND)",
+    hAxis: { title: "Day" },
+    vAxis: { 
+        title: "Revenue",
+        format: 'short'
+    },
     legend: { position: "bottom" },
     curveType: "function",
     chartArea: { width: "80%", height: "70%" },
   };
 
   const pieChartWeekData = [
-    ["Trạng thái", "Số lượng"],
-    ["Đã giao", 30],
-    ["Đang xử lý", 10],
-    ["Hủy", 8],
+    ["Status", "Quantity"],
+    ["Pending", 15],
+    ["Confirmed", 20],
+    ["Shipping", 18],
+    ["Delivered", 25],
+    ["Cancelled", 7],
   ];
+
   const pieChartWeekOptions = {
-    title: "Tỷ lệ đơn hàng tuần",
+    title: "Weekly Order Ratio",
     pieHole: 0.4,
     chartArea: { width: "80%", height: "70%" },
+    colors: ["#ffc107", "#17a2b8", "#007bff", "#28a745", "#dc3545"],
   };
 
-  // ======= Dữ liệu biểu đồ tháng =======
   const comboChartMonthData = [
-    ["Tháng", "Sản phẩm bán", "Đơn hàng"],
-    ["1", 40, 20],
-    ["2", 45, 25],
-    ["3", 50, 30],
-    ["4", 38, 28],
-    ["5", 55, 35],
-    ["6", 60, 40],
-    ["7", 52, 30],
-    ["8", 48, 32],
-    ["9", 50, 35],
-    ["10", 58, 38],
-    ["11", 62, 40],
-    ["12", 70, 45],
+    ["Month", "Products Sold", "Orders"],
+    ["Jan", 70, 25],
+    ["Feb", 75, 28],
+    ["Mar", 80, 30],
+    ["Apr", 72, 26],
+    ["May", 85, 32],
+    ["Jun", 90, 35],
+    ["Jul", 78, 28],
+    ["Aug", 82, 30],
+    ["Sep", 88, 33],
+    ["Oct", 92, 35],
+    ["Nov", 95, 36],
+    ["Dec", 100, 40],
   ];
+
   const comboChartMonthOptions = {
-    title: "Thống kê tháng",
-    vAxis: { title: "Số lượng" },
-    hAxis: { title: "Tháng" },
+    title: "Monthly Statistics (Yearly View)",
+    vAxis: { title: "Quantity" },
+    hAxis: { title: "Month" },
     seriesType: "bars",
     legend: { position: "bottom" },
     chartArea: { width: "80%", height: "70%" },
   };
 
   const lineChartMonthData = [
-    ["Tháng", "Doanh thu"],
-    ["1", 10000000],
-    ["2", 12000000],
-    ["3", 15000000],
-    ["4", 13000000],
-    ["5", 17000000],
-    ["6", 18000000],
-    ["7", 16000000],
-    ["8", 15500000],
-    ["9", 17000000],
-    ["10", 18000000],
-    ["11", 19000000],
-    ["12", 21000000],
+    ["Month", "Revenue"],
+    ["Jan", 45000000],
+    ["Feb", 48000000],
+    ["Mar", 52000000],
+    ["Apr", 50000000],
+    ["May", 55000000],
+    ["Jun", 58000000],
+    ["Jul", 53000000],
+    ["Aug", 52000000],
+    ["Sep", 56000000],
+    ["Oct", 60000000],
+    ["Nov", 62000000],
+    ["Dec", 65000000],
   ];
+
   const lineChartMonthOptions = {
-    title: "Doanh thu tháng (VNĐ)",
-    hAxis: { title: "Tháng" },
-    vAxis: { title: "Doanh thu" },
+    title: "Monthly Revenue (VND)",
+    hAxis: { title: "Month" },
+    vAxis: { 
+        title: "Revenue",
+        format: 'short'
+    },
     legend: { position: "bottom" },
     curveType: "function",
     chartArea: { width: "80%", height: "70%" },
   };
 
   const pieChartMonthData = [
-    ["Trạng thái", "Số lượng"],
-    ["Đã giao", 200],
-    ["Đang xử lý", 50],
-    ["Hủy", 20],
+    ["Status", "Quantity"],
+    ["Pending", 40],
+    ["Confirmed", 70],
+    ["Shipping", 65],
+    ["Delivered", 120],
+    ["Cancelled", 25],
   ];
+
   const pieChartMonthOptions = {
-    title: "Tỷ lệ đơn hàng tháng",
+    title: "Monthly Order Ratio",
     pieHole: 0.4,
     chartArea: { width: "80%", height: "70%" },
+    colors: ["#ffc107", "#17a2b8", "#007bff", "#28a745", "#dc3545"],
   };
 
   return (
     <div className="container mx-auto mt-6 px-2 md:px-4">
-      <h2 className="text-center text-2xl font-bold mb-6">Báo Cáo Thống Kê</h2>
+      <h2 className="text-center text-2xl font-bold mb-6">Statistical Report</h2>
 
-      {/* ======= Tổng quan nhanh ======= */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="p-4 shadow rounded bg-blue-50 text-center">
-          <h4 className="font-semibold text-lg">Đơn hàng tuần</h4>
+          <h4 className="font-semibold text-lg">Weekly Orders</h4>
           <p className="text-2xl font-bold">{weeklyOrders}</p>
         </div>
         <div className="p-4 shadow rounded bg-green-50 text-center">
-          <h4 className="font-semibold text-lg">Đơn hàng tháng</h4>
+          <h4 className="font-semibold text-lg">Monthly Orders</h4>
           <p className="text-2xl font-bold">{monthlyOrders}</p>
         </div>
         <div className="p-4 shadow rounded bg-yellow-50 text-center">
-          <h4 className="font-semibold text-lg">Doanh thu tuần</h4>
-          <p className="text-2xl font-bold">{weeklyRevenue.toLocaleString()}₫</p>
+          <h4 className="font-semibold text-lg">Weekly Revenue</h4>
+          <p className="text-2xl font-bold">{formatCurrency(weeklyRevenue)}</p>
         </div>
         <div className="p-4 shadow rounded bg-purple-50 text-center">
-          <h4 className="font-semibold text-lg">Doanh thu tháng</h4>
-          <p className="text-2xl font-bold">{monthlyRevenue.toLocaleString()}₫</p>
+          <h4 className="font-semibold text-lg">Monthly Revenue</h4>
+          <p className="text-2xl font-bold">{formatCurrency(monthlyRevenue)}</p>
         </div>
         <div className="p-4 shadow rounded bg-pink-50 text-center">
-          <h4 className="font-semibold text-lg">Sản phẩm bán tuần</h4>
+          <h4 className="font-semibold text-lg">Products Sold (Week)</h4>
           <p className="text-2xl font-bold">{productsSoldWeek}</p>
         </div>
         <div className="p-4 shadow rounded bg-indigo-50 text-center">
-          <h4 className="font-semibold text-lg">Sản phẩm bán tháng</h4>
+          <h4 className="font-semibold text-lg">Products Sold (Month)</h4>
           <p className="text-2xl font-bold">{productsSoldMonth}</p>
         </div>
       </div>
 
-      {/* ======= Báo cáo tuần ======= */}
-      <h3 className="text-center text-xl font-bold mb-2">Thống kê tuần</h3>
+      <h3 className="text-center text-xl font-bold mb-2">Weekly Statistics</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="w-full h-64 md:h-72">
           <Chart
@@ -185,8 +202,7 @@ export default function AdminReport() {
         </div>
       </div>
 
-      {/* ======= Báo cáo tháng ======= */}
-      <h3 className="text-center text-xl font-bold mb-2">Thống kê tháng</h3>
+      <h3 className="text-center text-xl font-bold mb-2">Monthly Statistics</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="w-full h-64 md:h-72">
           <Chart

@@ -23,7 +23,7 @@ router.delete('/sizes/:id', adminController.removeSize);
 router.get('/orders', adminController.getOrders);
 router.put('/orders/:id', adminController.updateOrderStatus);
 
-// 4. Quản lý Banner (ĐÃ BỔ SUNG)
+// 4. Quản lý Banner 
 router.get('/banners', adminController.getBanners);
 router.post('/banners', adminController.addBanner);
 router.put('/banners/:id', adminController.editBanner);

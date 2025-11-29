@@ -44,5 +44,5 @@ app.get('/banners', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server đang chạy tại http://localhost:${PORT}`);
+  console.log(`Server is running at http://localhost:${PORT}`);
 });

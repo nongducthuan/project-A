@@ -1,66 +1,112 @@
-const categoryModel = require('../models/categoryModel');
+// controllers/categoryController.js
+const categoryModel = require("../models/categoryModel");
 
-// Lấy danh sách danh mục
+/**
+ * GET /categories
+ * Retrieves all categories (admin table)
+ */
 async function getCategories(req, res) {
   try {
     const categories = await categoryModel.getAllCategories();
-    // Trả về cấu trúc { data: ... } để khớp với Frontend
-    res.status(200).json({
-      data: categories
-    });
+    res.status(200).json({ data: categories });
   } catch (err) {
-    console.error("❌ Lỗi getCategories:", err);
-    res.status(500).json({ message: 'Lỗi khi lấy danh mục' });
+    console.error("getCategories error:", err);
+    res.status(500).json({ message: "Error fetching categories" }); // Changed
   }
 }
 
-// Tạo danh mục mới
+/**
+ * GET /categories/recommend?gender=...
+ * Suggests categories not yet linked to a specific gender
+ */
+async function getRecommendCategories(req, res) {
+  try {
+    const gender = req.query.gender;
+    if (!gender) return res.status(400).json({ message: "Missing gender" }); // Changed
+
+    const result = await categoryModel.getRecommendCategoriesForGender(gender);
+    res.json({ data: result });
+  } catch (err) {
+    console.error("getRecommendCategories error:", err);
+    res.status(500).json({ message: "Error fetching recommended categories" }); // Changed
+  }
+}
+
+/**
+ * GET /categories/with-preview
+ * Retrieves categories (for navbar) including preview_image
+ */
+async function getCategoriesWithPreview(req, res) {
+  try {
+    const rows = await categoryModel.getCategoriesWithPreview();
+    res.status(200).json({ data: rows });
+  } catch (err) {
+    console.error("getCategoriesWithPreview error:", err);
+    res.status(500).json({ message: "Error fetching categories with preview" }); // Changed
+  }
+}
+
+/**
+ * POST /categories  (admin)
+ */
 async function createCategory(req, res) {
   try {
-    const { name } = req.body;
-    if (!name) return res.status(400).json({ message: "Tên danh mục là bắt buộc" });
-
     const id = await categoryModel.createCategory(req.body);
-    res.status(201).json({ message: "Tạo thành công", id });
+    res.status(201).json({ message: "Successfully created", id }); // Changed
   } catch (err) {
-    console.error("❌ Lỗi createCategory:", err);
-    res.status(500).json({ message: 'Lỗi khi thêm danh mục' });
+    console.error("createCategory error:", err);
+    res.status(500).json({ message: "Error adding category" }); // Changed
   }
 }
 
-// Cập nhật
+/**
+ * PUT /categories/:id  (admin)
+ */
 async function updateCategory(req, res) {
   try {
     const rows = await categoryModel.updateCategory(req.params.id, req.body);
-    if (rows === 0) return res.status(404).json({ message: "Không tìm thấy danh mục" });
-
-    res.json({ message: "Cập nhật thành công", affected: rows });
+    if (rows === 0) return res.status(404).json({ message: "Category not found" }); // Changed
+    res.json({ message: "Successfully updated" }); // Changed
   } catch (err) {
-    console.error("❌ Lỗi updateCategory:", err);
-    res.status(500).json({ message: 'Lỗi khi cập nhật danh mục' });
+    console.error("updateCategory error:", err);
+    res.status(500).json({ message: "Error updating category" }); // Changed
   }
 }
 
-// Xóa
+/**
+ * DELETE /categories/:id  (admin)
+ */
 async function deleteCategory(req, res) {
   try {
     const rows = await categoryModel.deleteCategory(req.params.id);
-    if (rows === 0) return res.status(404).json({ message: "Không tìm thấy danh mục" });
-
-    res.json({ message: "Xóa thành công", affected: rows });
+    if (rows === 0) return res.status(404).json({ message: "Category not found" }); // Changed
+    res.json({ message: "Successfully deleted" }); // Changed
   } catch (err) {
-    console.error("❌ Lỗi deleteCategory:", err);
-    // Lỗi này thường do ràng buộc khóa ngoại (đang có sản phẩm thuộc danh mục này)
-    if (err.code === 'ER_ROW_IS_REFERENCED_2') {
-      return res.status(400).json({ message: 'Không thể xóa danh mục đang chứa sản phẩm' });
-    }
-    res.status(500).json({ message: 'Lỗi khi xóa danh mục' });
+    console.error("deleteCategory error:", err);
+    res.status(500).json({ message: "Error deleting category" }); // Changed
+  }
+}
+
+/**
+ * GET /categories/:id/images
+ * Retrieves a list of related images to select a representative image during edit
+ */
+async function getCategoryImages(req, res) {
+  try {
+    const images = await categoryModel.getCategoryImages(req.params.id);
+    res.json({ data: images });
+  } catch (err) {
+    console.error("getCategoryImages error:", err);
+    res.status(500).json({ message: "Error fetching category images" }); // Changed
   }
 }
 
 module.exports = {
   getCategories,
+  getRecommendCategories,
+  getCategoriesWithPreview,
   createCategory,
   updateCategory,
-  deleteCategory
+  deleteCategory,
+  getCategoryImages,
 };
