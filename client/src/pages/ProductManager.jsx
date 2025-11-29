@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { Listbox, Transition } from "@headlessui/react";
-import { FaChevronDown, FaImage, FaPen, FaTrash } from "react-icons/fa6";
 
 // --- INTERNAL COMPONENTS (To ensure stability) ---
 
@@ -129,6 +128,26 @@ export default function ProductManager() {
     }
   };
 
+  // --- LOGIC GỘP DANH MỤC TRÙNG TÊN CHO BỘ LỌC ---
+  const uniqueCategoriesForFilter = useMemo(() => {
+    // Chỉ xử lý danh sách category hiện tại (theo gender đang chọn hoặc tất cả)
+    const currentList = filterGender === "all" 
+      ? categories 
+      : categories.filter(c => c.gender === filterGender);
+
+    const unique = [];
+    const seenNames = new Set();
+
+    currentList.forEach(cat => {
+      const nameKey = cat.name.trim().toLowerCase();
+      if (!seenNames.has(nameKey)) {
+        seenNames.add(nameKey);
+        unique.push(cat); // Giữ lại đại diện đầu tiên
+      }
+    });
+    return unique;
+  }, [categories, filterGender]);
+
   // FILTER + SORT
   const sortGenderOrder = (list) => {
     const order = { male: 1, female: 2, unisex: 3 };
@@ -137,13 +156,32 @@ export default function ProductManager() {
 
   const filteredProducts = useMemo(() => {
     const sorted = sortGenderOrder(products);
+    
     return sorted.filter((p) => {
       const matchGender = filterGender === "all" || p.gender === filterGender;
-      const matchCategory = filterCategory === "all" || String(p.category_id) === String(filterCategory);
+      
+      // LOGIC LỌC THÔNG MINH THEO TÊN (Để xử lý việc gộp danh mục)
+      let matchCategory = true;
+      if (filterCategory !== "all") {
+        // Tìm tên của danh mục đang được chọn trong dropdown
+        const selectedCatObj = categories.find(c => String(c.id) === String(filterCategory));
+        if (selectedCatObj) {
+           // Tìm tất cả ID có cùng tên đó
+           const sameNameIds = categories
+             .filter(c => c.name.trim().toLowerCase() === selectedCatObj.name.trim().toLowerCase())
+             .map(c => String(c.id));
+           // Sản phẩm khớp nếu category_id của nó nằm trong danh sách ID cùng tên
+           matchCategory = sameNameIds.includes(String(p.category_id));
+        } else {
+           // Fallback
+           matchCategory = String(p.category_id) === String(filterCategory);
+        }
+      }
+
       const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
       return matchGender && matchCategory && matchSearch;
     });
-  }, [products, filterGender, filterCategory, searchTerm]);
+  }, [products, filterGender, filterCategory, searchTerm, categories]);
 
   // SUBMIT
   const handleSubmit = async (e) => {
@@ -265,6 +303,7 @@ export default function ProductManager() {
                 onChange={(e) => setForm({ ...form, category_id: e.target.value })}
               >
                 <option value="">-- Select Category --</option>
+                {/* FORM dùng categories đầy đủ để chọn chính xác ID */}
                 {categories
                   .filter((c) => c.gender === form.gender)
                   .map((c) => (
@@ -350,7 +389,7 @@ export default function ProductManager() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-              {/* CATEGORY DROPDOWN */}
+              {/* CATEGORY DROPDOWN - DÙNG DANH SÁCH DUY NHẤT (GỘP TÊN) */}
               <div className="relative w-full sm:w-48 z-20">
                 <Listbox value={filterCategory} onChange={setFilterCategory}>
                   <div className="relative">
@@ -361,7 +400,7 @@ export default function ProductManager() {
                           : categories.find((c) => String(c.id) === String(filterCategory))?.name || "Select"}
                       </span>
                       <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                        <FaChevronDown className="h-3 w-3 text-gray-400" aria-hidden="true" />
+                        <i className="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
                       </span>
                     </Listbox.Button>
                     <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
@@ -369,7 +408,8 @@ export default function ProductManager() {
                         <Listbox.Option value="all" className={({ active }) => `relative cursor-default select-none py-2 pl-4 pr-4 ${active ? 'bg-violet-100 text-violet-900' : 'text-gray-900'}`}>
                           All Categories
                         </Listbox.Option>
-                        {(filterGender === "all" ? categories : categories.filter((c) => c.gender === filterGender)).map((c) => (
+                        {/* Dùng uniqueCategoriesForFilter để hiển thị không trùng */}
+                        {uniqueCategoriesForFilter.map((c) => (
                           <Listbox.Option key={c.id} value={c.id} className={({ active }) => `relative cursor-default select-none py-2 pl-4 pr-4 ${active ? 'bg-violet-100 text-violet-900' : 'text-gray-900'}`}>
                             {c.name}
                           </Listbox.Option>
@@ -405,7 +445,7 @@ export default function ProductManager() {
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full text-gray-300">
-                      <FaImage className="text-4xl" />
+                      <i className="fa-solid fa-image text-4xl"></i>
                     </div>
                   )}
                   <span className={`absolute top-2 right-2 px-2 py-1 text-xs font-bold text-white rounded uppercase shadow-sm ${
@@ -429,14 +469,14 @@ export default function ProductManager() {
                         className="p-2 bg-gray-100 text-yellow-600 rounded-full hover:bg-yellow-100 transition"
                         title="Edit Info"
                       >
-                        <FaPen size={12} />
+                        <i className="fa-solid fa-pen text-xs"></i>
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }}
                         className="p-2 bg-gray-100 text-red-600 rounded-full hover:bg-red-100 transition"
                         title="Delete"
                       >
-                        <FaTrash size={12} />
+                        <i className="fa-solid fa-trash text-xs"></i>
                       </button>
                     </div>
                   </div>
