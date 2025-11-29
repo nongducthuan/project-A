@@ -32,7 +32,7 @@ export default function ProductCard({ product }) {
                 product.gender === 'male' ? 'bg-primary' :
                 product.gender === 'female' ? 'bg-danger' : 'bg-success'
             }`}>
-                {product.gender === 'male' ? 'Nam' : product.gender === 'female' ? 'Nữ' : 'Unisex'}
+                {product.gender === 'male' ? 'Male' : product.gender === 'female' ? 'Female' : 'Unisex'}
             </span>
         )}
       </div>

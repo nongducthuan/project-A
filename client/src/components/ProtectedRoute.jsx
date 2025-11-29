@@ -9,7 +9,7 @@ export default function ProtectedRoute({ children, roleRequired }) {
   if (roleRequired && user.role !== roleRequired) {
     return (
       <p style={{ textAlign: "center", marginTop: "2rem" }}>
-        Không có quyền truy cập!
+        No access permission!
       </p>
     );
   }
