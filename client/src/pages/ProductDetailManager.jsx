@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API from "../api.jsx";
 
-export default function AdminProductDetail() {
+export default function ProductDetailManager() {
   const { id } = useParams();
   const navigate = useNavigate();
   const token = localStorage.getItem("token");

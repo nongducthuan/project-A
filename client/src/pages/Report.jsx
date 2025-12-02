@@ -1,6 +1,6 @@
 import { Chart } from "react-google-charts";
 
-export default function AdminReport() {
+export default function Report() {
   const weeklyOrders = 85;
   const monthlyOrders = 320;
   const weeklyRevenue = 145000000; 

@@ -1,31 +1,25 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { CartProvider } from "./context/CartContext";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Cart from "./pages/Cart";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Checkout from "./pages/Checkout";
-import Admin from "./pages/Admin";
+import Dashboard from "./pages/Dashboard.jsx";
 import AuthProvider from "./context/AuthContext";
-import { CartProvider } from "./context/CartContext";
-
 import Order from "./pages/Order";
 import Search from "./pages/Search";
 import ProductDetail from "./pages/ProductDetail";
-import AdminProductDetail from "./pages/AdminProductDetail";
+import ProductDetailManager from "./pages/ProductDetailManager.jsx";
 import Category from "./pages/Category";
-
-// === Manager Pages ===
 import BannerManager from "./pages/BannerManager";
 import ProductManager from "./pages/ProductManager";
 import OrderManager from "./pages/OrderManager";
-import CategoryManager from "./pages/CategoryManager";  // <-- FIX IMPORT
-
-import AdminReport from "./pages/AdminReport";
+import CategoryManager from "./pages/CategoryManager";  
+import Report from "./pages/Report";
 import Profile from "./pages/Profile";
-
 import "./assets/style/style.css";
 
 function App() {
@@ -55,7 +49,7 @@ function App() {
               path="/admin"
               element={
                 <ProtectedRoute roleRequired="admin">
-                  <Admin />
+                  <Dashboard />
                 </ProtectedRoute>
               }
             />
@@ -91,7 +85,7 @@ function App() {
               path="/admin/products/:id"
               element={
                 <ProtectedRoute roleRequired="admin">
-                  <AdminProductDetail />
+                  <ProductDetailManager />
                 </ProtectedRoute>
               }
             />
@@ -100,7 +94,7 @@ function App() {
               path="/admin/report"
               element={
                 <ProtectedRoute roleRequired="admin">
-                  <AdminReport />
+                  <Report />
                 </ProtectedRoute>
               }
             />

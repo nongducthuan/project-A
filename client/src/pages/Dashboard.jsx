@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import API from "../api.jsx";
 
-export default function Admin() {
+export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     productCount: 0,
