@@ -62,11 +62,11 @@ export default function Profile() {
   // CSS for status Badge
   const getStatusBadge = (status) => {
     const colors = {
-      "Chờ xác nhận": "bg-yellow-100 text-yellow-800", // Pending Confirmation
-      "Đã xác nhận": "bg-blue-100 text-blue-800", // Confirmed
-      "Đang giao hàng": "bg-purple-100 text-purple-800", // Delivering
-      "Đã giao hàng": "bg-green-100 text-green-800", // Delivered
-      "Đã hủy": "bg-red-100 text-red-800", // Cancelled
+      "Pending": "bg-yellow-100 text-yellow-800", // Pending Confirmation
+      "Confirmed": "bg-blue-100 text-blue-800", // Confirmed
+      "Shipping": "bg-purple-100 text-purple-800", // Delivering
+      "Delivered": "bg-green-100 text-green-800", // Delivered
+      "Cancelled": "bg-red-100 text-red-800", // Cancelled
     };
     return (
       <span
