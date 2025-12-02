@@ -144,7 +144,7 @@ export default function Profile() {
             <p className="text-sm text-gray-400 mt-1">
               Member since:{" "}
               {new Date(user.created_at || Date.now()).toLocaleDateString(
-                "en-US" // Changed locale for English formatting
+                "vi-VN" 
               )}
             </p>
           </div>
