@@ -208,7 +208,7 @@ export default function Profile() {
                           </span>
                           <span className="text-sm text-gray-500">
                             {new Date(order.created_at).toLocaleDateString(
-                              "en-US" // Changed locale
+                              "vi-VN" 
                             )}
                           </span>
                         </div>
