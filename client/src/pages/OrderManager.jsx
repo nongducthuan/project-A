@@ -67,11 +67,11 @@ export default function OrderManager() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "Chờ xác nhận": return "#ffc107"; // Yellow
-      case "Đã xác nhận": return "#17a2b8"; // Cyan
-      case "Đang giao hàng": return "#007bff"; // Blue
-      case "Đã giao hàng": return "#28a745"; // Green
-      case "Đã hủy": return "#dc3545"; // Red
+      case "Pending": return "#ffc107"; // Yellow
+      case "Confirmed": return "#17a2b8"; // Cyan
+      case "Shipping": return "#007bff"; // Blue
+      case "Delivered": return "#28a745"; // Green
+      case "Cancelled": return "#dc3545"; // Red
       default: return "#6c757d";
     }
   };
@@ -101,11 +101,11 @@ export default function OrderManager() {
           >
             <option value="All">All Statuses</option>
             {/* Values must match DB (Vietnamese), Labels are English */}
-            <option value="Chờ xác nhận">Pending</option>
-            <option value="Đã xác nhận">Confirmed</option>
-            <option value="Đang giao hàng">Shipping</option>
-            <option value="Đã giao hàng">Delivered</option>
-            <option value="Đã hủy">Cancelled</option>
+            <option value="Pending">Pending</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Shipping">Shipping</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Cancelled">Cancelled</option>
           </select>
         </div>
       </div>
@@ -197,11 +197,11 @@ export default function OrderManager() {
                         className="text-xs font-bold text-white py-1 px-2 rounded cursor-pointer border-0 focus:ring-2 focus:ring-offset-1"
                         style={{ backgroundColor: getStatusColor(order.status) }}
                       >
-                        <option value="Chờ xác nhận" className="text-gray-800 bg-white">Pending</option>
-                        <option value="Đã xác nhận" className="text-gray-800 bg-white">Confirmed</option>
-                        <option value="Đang giao hàng" className="text-gray-800 bg-white">Shipping</option>
-                        <option value="Đã giao hàng" className="text-gray-800 bg-white">Delivered</option>
-                        <option value="Đã hủy" className="text-gray-800 bg-white">Cancelled</option>
+                        <option value="Pending" className="text-gray-800 bg-white">Pending</option>
+                        <option value="Confirmed" className="text-gray-800 bg-white">Confirmed</option>
+                        <option value="Shipping" className="text-gray-800 bg-white">Shipping</option>
+                        <option value="Delivered" className="text-gray-800 bg-white">Delivered</option>
+                        <option value="Cancelled" className="text-gray-800 bg-white">Cancelled</option>
                       </select>
                     </td>
                     <td className="py-4 px-4 text-center whitespace-nowrap">
@@ -288,12 +288,12 @@ export default function OrderManager() {
                 Close
               </button>
 
-              {selectedOrder.status === "Chờ xác nhận" && (
+              {selectedOrder.status === "Pending" && (
                 confirmAction ? (
                   <button
                     className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition animate-pulse"
                     onClick={() => {
-                      handleChangeStatus(selectedOrder.id, "Đã xác nhận");
+                      handleChangeStatus(selectedOrder.id, "Confirmed");
                       setConfirmAction(false);
                     }}
                     onMouseLeave={() => setConfirmAction(false)}
