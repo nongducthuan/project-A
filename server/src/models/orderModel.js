@@ -1,13 +1,19 @@
 const pool = require('../db');
 
 // Tạo đơn hàng chính
-async function createOrder(conn, userId, totalPrice, address, phone, name) {
-  const [result] = await conn.query(
-    `INSERT INTO orders 
-     (user_id, total_price, address, phone, name, status, created_at)
-     VALUES (?, ?, ?, ?, ?, 'Pending', NOW())`,
-    [userId, totalPrice, address, phone, name]
-  );
+async function createOrder(connection, user_id, total_price, address, phone, name, email) {
+  const query = `
+    INSERT INTO orders (user_id, total_price, address, phone, name, email, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, 'Pending', NOW())
+  `;
+  const [result] = await connection.execute(query, [
+    user_id,
+    total_price,
+    address,
+    phone,
+    name,
+    email 
+  ]);
   return result.insertId;
 }
 

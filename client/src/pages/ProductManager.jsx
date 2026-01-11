@@ -30,7 +30,7 @@ const API = {
     const isFormData = body instanceof FormData;
     const headers = { ...options.headers };
     if (!isFormData) headers["Content-Type"] = "application/json";
-    
+
     const res = await fetch(`${BACKEND_URL}${endpoint}`, {
       ...options,
       method: "POST",
@@ -83,6 +83,9 @@ export default function ProductManager() {
     category_id: "",
   });
 
+  // mobile UI state: collapse form on small screens by default
+  const [mobileFormOpen, setMobileFormOpen] = useState(false);
+
   const showToast = (message, type = "success") => setToast({ message, type });
 
   // FETCH DATA
@@ -130,9 +133,8 @@ export default function ProductManager() {
 
   // --- LOGIC GỘP DANH MỤC TRÙNG TÊN CHO BỘ LỌC ---
   const uniqueCategoriesForFilter = useMemo(() => {
-    // Chỉ xử lý danh sách category hiện tại (theo gender đang chọn hoặc tất cả)
-    const currentList = filterGender === "all" 
-      ? categories 
+    const currentList = filterGender === "all"
+      ? categories
       : categories.filter(c => c.gender === filterGender);
 
     const unique = [];
@@ -142,7 +144,7 @@ export default function ProductManager() {
       const nameKey = cat.name.trim().toLowerCase();
       if (!seenNames.has(nameKey)) {
         seenNames.add(nameKey);
-        unique.push(cat); // Giữ lại đại diện đầu tiên
+        unique.push(cat);
       }
     });
     return unique;
@@ -156,24 +158,19 @@ export default function ProductManager() {
 
   const filteredProducts = useMemo(() => {
     const sorted = sortGenderOrder(products);
-    
+
     return sorted.filter((p) => {
       const matchGender = filterGender === "all" || p.gender === filterGender;
-      
-      // LOGIC LỌC THÔNG MINH THEO TÊN (Để xử lý việc gộp danh mục)
+
       let matchCategory = true;
       if (filterCategory !== "all") {
-        // Tìm tên của danh mục đang được chọn trong dropdown
         const selectedCatObj = categories.find(c => String(c.id) === String(filterCategory));
         if (selectedCatObj) {
-           // Tìm tất cả ID có cùng tên đó
            const sameNameIds = categories
              .filter(c => c.name.trim().toLowerCase() === selectedCatObj.name.trim().toLowerCase())
              .map(c => String(c.id));
-           // Sản phẩm khớp nếu category_id của nó nằm trong danh sách ID cùng tên
            matchCategory = sameNameIds.includes(String(p.category_id));
         } else {
-           // Fallback
            matchCategory = String(p.category_id) === String(filterCategory);
         }
       }
@@ -206,6 +203,8 @@ export default function ProductManager() {
       setForm({ name: "", description: "", price: "", image_url: "", gender: "unisex", category_id: "" });
       window.dispatchEvent(new Event("categories-updated"));
       await fetchData();
+      // close mobile form after save for better UX
+      setMobileFormOpen(false);
     } catch (err) {
       showToast("Failed to save product", "error");
     }
@@ -222,6 +221,8 @@ export default function ProductManager() {
       category_id: p.category_id,
     });
     setEditingId(p.id);
+    // open form on mobile when editing
+    setMobileFormOpen(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -243,135 +244,149 @@ export default function ProductManager() {
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4 gap-4">
         <h2 className="text-2xl font-bold uppercase text-gray-800">Product Management</h2>
-        <button
-          onClick={() => navigate("/admin/categories")}
-          className="w-full md:w-auto px-6 py-2 bg-violet-600 text-white rounded-lg font-semibold hover:bg-violet-700 transition shadow-sm"
-        >
-          Manage Categories
-        </button>
+        <div className="flex gap-3 w-full md:w-auto">
+          <button
+            onClick={() => navigate("/admin/categories")}
+            className="w-full md:w-auto px-6 py-2 bg-violet-600 text-white rounded-lg font-semibold hover:bg-violet-700 transition shadow-sm"
+          >
+            Manage Categories
+          </button>
+
+          {/* Mobile toggle for form */}
+          <button
+            onClick={() => setMobileFormOpen((s) => !s)}
+            className="md:hidden px-4 py-2 border rounded-lg bg-white hover:bg-gray-50"
+          >
+            {mobileFormOpen ? "Hide Form" : editingId ? "Edit Product" : "Create Product"}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
+
         {/* LEFT COLUMN: FORM */}
-        <div className="lg:col-span-4 bg-white p-6 rounded-xl shadow border border-gray-100 sticky top-4">
-          <h3 className="font-bold text-lg mb-4 text-violet-600 border-b pb-2">
-            {editingId ? "Edit Product" : "Create New Product"}
-          </h3>
+        {/* On desktop we show sticky form; on mobile we either hide it (collapsed) or show it above list */}
+        <div className={`lg:col-span-4 ${mobileFormOpen ? "block" : "hidden md:block"}`}>
+          <div className="bg-white p-6 rounded-xl shadow border border-gray-100 lg:sticky lg:top-4">
+            <h3 className="font-bold text-lg mb-4 text-violet-600 border-b pb-2">
+              {editingId ? "Edit Product" : "Create New Product"}
+            </h3>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Product Name</label>
-              <input
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Cotton T-Shirt..."
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Price</label>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Product Name</label>
                 <input
-                  type="number"
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: +e.target.value })}
-                  placeholder="0"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. Cotton T-Shirt..."
                 />
               </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Gender</label>
-                <select
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-                  value={form.gender}
-                  onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                >
-                  <option value="unisex">Unisex</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                </select>
-              </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Category</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-                value={form.category_id}
-                onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-              >
-                <option value="">-- Select Category --</option>
-                {/* FORM dùng categories đầy đủ để chọn chính xác ID */}
-                {categories
-                  .filter((c) => c.gender === form.gender)
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Main Image</label>
-              <input type="file" className="block w-full text-sm text-gray-500 mb-2" onChange={handleFileUpload} />
-              <input
-                className="w-full px-3 py-2 border rounded-lg text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                value={form.image_url}
-                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                placeholder="Or image URL..."
-              />
-              {uploading && <p className="text-blue-500 text-xs">Uploading...</p>}
-              {form.image_url && (
-                <div className="mt-2 border rounded p-1 bg-gray-50">
-                  <img
-                    src={form.image_url.startsWith("http") ? form.image_url : `${BACKEND_URL}${form.image_url}`}
-                    className="w-full h-40 object-cover rounded"
-                    alt="Preview"
-                    onError={(e) => e.target.src = "http://localhost:5000/public/placeholder.jpg"}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Price</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: +e.target.value })}
+                    placeholder="0"
                   />
                 </div>
-              )}
-            </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Gender</label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+                    value={form.gender}
+                    onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                  >
+                    <option value="unisex">Unisex</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>
-              <textarea
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                rows="3"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-              />
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="submit"
-                className={`flex-1 py-2 px-4 rounded-lg font-bold text-white transition ${
-                  editingId ? "bg-yellow-500 hover:bg-yellow-600" : "bg-violet-600 hover:bg-violet-700"
-                }`}
-              >
-                {editingId ? "Update Product" : "Create Product"}
-              </button>
-              {editingId && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingId(null);
-                    setForm({ name: "", description: "", price: "", image_url: "", gender: "unisex", category_id: "" });
-                  }}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold"
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Category</label>
+                <select
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+                  value={form.category_id}
+                  onChange={(e) => setForm({ ...form, category_id: e.target.value })}
                 >
-                  Cancel
+                  <option value="">-- Select Category --</option>
+                  {categories
+                    .filter((c) => c.gender === form.gender)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Main Image</label>
+                <input type="file" className="block w-full text-sm text-gray-500 mb-2" onChange={handleFileUpload} />
+                <input
+                  className="w-full px-3 py-2 border rounded-lg text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  value={form.image_url}
+                  onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                  placeholder="Or image URL..."
+                />
+                {uploading && <p className="text-blue-500 text-xs">Uploading...</p>}
+                {form.image_url && (
+                  <div className="mt-2 border rounded p-1 bg-gray-50">
+                    <img
+                      src={form.image_url.startsWith("http") ? form.image_url : `${BACKEND_URL}${form.image_url}`}
+                      className="w-full h-40 object-cover rounded"
+                      alt="Preview"
+                      onError={(e) => e.target.src = "http://localhost:5000/public/placeholder.jpg"}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>
+                <textarea
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  rows="3"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  className={`flex-1 py-2 px-4 rounded-lg font-bold text-white transition ${
+                    editingId ? "bg-yellow-500 hover:bg-yellow-600" : "bg-violet-600 hover:bg-violet-700"
+                  }`}
+                >
+                  {editingId ? "Update Product" : "Create Product"}
                 </button>
-              )}
-            </div>
-          </form>
+                {editingId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingId(null);
+                      setForm({ name: "", description: "", price: "", image_url: "", gender: "unisex", category_id: "" });
+                      // on mobile close form after cancel
+                      setMobileFormOpen(false);
+                    }}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
         </div>
 
         {/* RIGHT COLUMN: LIST */}
         <div className="lg:col-span-8">
-          
+
           {/* FILTER BAR */}
           <div className="bg-white p-4 rounded-xl shadow-sm mb-6 flex flex-col md:flex-row gap-4 justify-between items-center border border-gray-100">
             <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
@@ -389,7 +404,6 @@ export default function ProductManager() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-              {/* CATEGORY DROPDOWN - DÙNG DANH SÁCH DUY NHẤT (GỘP TÊN) */}
               <div className="relative w-full sm:w-48 z-20">
                 <Listbox value={filterCategory} onChange={setFilterCategory}>
                   <div className="relative">
@@ -408,7 +422,6 @@ export default function ProductManager() {
                         <Listbox.Option value="all" className={({ active }) => `relative cursor-default select-none py-2 pl-4 pr-4 ${active ? 'bg-violet-100 text-violet-900' : 'text-gray-900'}`}>
                           All Categories
                         </Listbox.Option>
-                        {/* Dùng uniqueCategoriesForFilter để hiển thị không trùng */}
                         {uniqueCategoriesForFilter.map((c) => (
                           <Listbox.Option key={c.id} value={c.id} className={({ active }) => `relative cursor-default select-none py-2 pl-4 pr-4 ${active ? 'bg-violet-100 text-violet-900' : 'text-gray-900'}`}>
                             {c.name}
@@ -430,12 +443,12 @@ export default function ProductManager() {
             </div>
           </div>
 
-          {/* PRODUCT GRID */}
+          {/* PRODUCT GRID: mobile 1/2 columns, desktop 3 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredProducts.map((p) => (
               <div key={p.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition cursor-pointer group" onClick={() => navigate(`/admin/products/${p.id}`)}>
-                {/* Image */}
-                <div className="relative h-48 bg-gray-50 overflow-hidden">
+                {/* Image responsive: smaller on mobile */}
+                <div className="relative h-36 sm:h-48 bg-gray-50 overflow-hidden">
                   {p.image_url ? (
                     <img
                       src={p.image_url.startsWith("http") ? p.image_url : `${BACKEND_URL}${p.image_url}`}
@@ -448,9 +461,7 @@ export default function ProductManager() {
                       <i className="fa-solid fa-image text-4xl"></i>
                     </div>
                   )}
-                  <span className={`absolute top-2 right-2 px-2 py-1 text-xs font-bold text-white rounded uppercase shadow-sm ${
-                    p.gender === "male" ? "bg-blue-500" : p.gender === "female" ? "bg-pink-500" : "bg-green-500"
-                  }`}>
+                  <span className={`absolute top-2 right-2 px-2 py-1 text-xs font-bold text-white rounded uppercase shadow-sm ${p.gender === "male" ? "bg-blue-500" : p.gender === "female" ? "bg-pink-500" : "bg-green-500"}`}>
                     {p.gender}
                   </span>
                 </div>
@@ -459,10 +470,10 @@ export default function ProductManager() {
                 <div className="p-4">
                   <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1 truncate">{p.category_name}</div>
                   <h4 className="font-bold text-gray-800 text-lg truncate mb-2" title={p.name}>{p.name}</h4>
-                  
+
                   <div className="flex justify-between items-center border-t pt-3 mt-1">
                     <span className="text-red-600 font-bold">{Number(p.price).toLocaleString()}đ</span>
-                    
+
                     <div className="flex gap-2">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleEdit(p); }}
@@ -488,7 +499,7 @@ export default function ProductManager() {
               </div>
             ))}
           </div>
-          
+
           {filteredProducts.length === 0 && (
             <div className="text-center py-10 text-gray-400 bg-white rounded-xl border border-dashed">
               No products found matching your criteria.

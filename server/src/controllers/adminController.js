@@ -156,5 +156,5 @@ module.exports = {
     getProducts, addProduct, editProduct, removeProduct, getProductDetail,
     addColor, removeColor, addSize, removeSize,
     getOrders, updateOrderStatus,
-    getBanners, addBanner, editBanner, removeBanner // Export additional banner functions
+    getBanners, addBanner, editBanner, removeBanner 
 };

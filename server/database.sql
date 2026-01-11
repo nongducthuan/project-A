@@ -119,12 +119,16 @@ CREATE TABLE orders (
    id INT AUTO_INCREMENT PRIMARY KEY,
    user_id INT DEFAULT NULL,
    voucher_id INT DEFAULT NULL,
-   total_price DECIMAL(10,2) DEFAULT 0 CHECK (total_price >= 0),
+   name VARCHAR(255) NOT NULL,
+   email VARCHAR(255) NOT NULL, 
+   phone VARCHAR(20) NOT NULL,
    address TEXT NOT NULL,
-   phone VARCHAR(20),
-   name VARCHAR(255),
+   total_price DECIMAL(10,2) DEFAULT 0 CHECK (total_price >= 0),
    status ENUM('Pending','Confirmed','Shipping','Delivered','Cancelled') DEFAULT 'Pending',
+   payment_method ENUM('cod', 'banking', 'e-wallet') DEFAULT 'cod',
+   payment_status ENUM('Unpaid', 'Paid') DEFAULT 'Unpaid',
    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
    FOREIGN KEY (voucher_id) REFERENCES vouchers(id)
 );
@@ -164,8 +168,16 @@ CREATE TABLE revenues (
   total_orders INT DEFAULT 0
 );
 
+CREATE TABLE otps (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    code VARCHAR(6) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ===============================================================
--- 11. SEED CATEGORIES 
+-- 11. SEED CATEGORIES
 -- ===============================================================
 INSERT INTO categories (id, name, gender, image_url) VALUES
 -- MEN

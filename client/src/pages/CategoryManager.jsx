@@ -29,7 +29,7 @@ export default function CategoryManager() {
    * ============================================================ */
   async function fetchCategories() {
     try {
-      const res = await API.get("/categories");
+      const res = await API.get("/categories/with-preview");
       let list = Array.isArray(res.data) ? res.data : res.data.data;
 
       // Sort by gender: male → female → unisex
@@ -38,7 +38,7 @@ export default function CategoryManager() {
 
       setCategories(list || []);
     } catch (error) {
-        console.error("Failed to fetch categories:", error);
+      console.error("Failed to fetch categories:", error);
     }
   }
 
@@ -83,7 +83,11 @@ export default function CategoryManager() {
       alert(`Category ${editingId ? "updated" : "added"} successfully!`);
     } catch (err) {
       console.error("Error saving category:", err);
-      alert(`Failed to save category. Error: ${err.response?.data?.message || err.message}`);
+      alert(
+        `Failed to save category. Error: ${
+          err.response?.data?.message || err.message
+        }`
+      );
     }
 
     setLoading(false);
@@ -110,21 +114,20 @@ export default function CategoryManager() {
 
     // Load related product images
     try {
-        const res = await API.get(`/categories/${cat.id}/images`);
-        setCategoryImages(res.data.data || []);
+      const res = await API.get(`/categories/${cat.id}/images`);
+      setCategoryImages(res.data.data || []);
 
-        // Load suggestions
-        const res2 = await API.get(
-            `/categories/recommend?gender=${cat.gender}`
-        );
-        setRecommendNames(res2.data.data || []);
+      // Load suggestions
+      const res2 = await API.get(`/categories/recommend?gender=${cat.gender}`);
+      setRecommendNames(res2.data.data || []);
     } catch (error) {
-        console.error("Failed to load edit data:", error);
+      console.error("Failed to load edit data:", error);
     }
   }
 
   async function handleDelete(id) {
-    if (!window.confirm("Are you sure you want to delete this category?")) return;
+    if (!window.confirm("Are you sure you want to delete this category?"))
+      return;
 
     try {
       await API.delete(`/categories/${id}`, auth);
@@ -155,7 +158,9 @@ export default function CategoryManager() {
     <div className="p-8 max-w-7xl mx-auto">
       {/* HEADER */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">CATEGORY MANAGEMENT</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          CATEGORY MANAGEMENT
+        </h1>
         <button
           onClick={() => (window.location.href = "/admin/products")}
           className="px-4 py-2 bg-violet-600 text-white rounded-lg font-semibold hover:bg-violet-700"
@@ -196,9 +201,7 @@ export default function CategoryManager() {
                       <button
                         key={idx}
                         type="button"
-                        onClick={() =>
-                          setForm({ ...form, name: item.name })
-                        }
+                        onClick={() => setForm({ ...form, name: item.name })}
                         className="px-3 py-1 bg-white border rounded-lg shadow-sm hover:bg-violet-100 text-sm"
                       >
                         {item.name}
@@ -333,21 +336,25 @@ export default function CategoryManager() {
                   .map((cat) => (
                     <tr key={cat.id} className="hover:bg-gray-50">
                       <td className="p-3 border">
-                        {cat.image_url ? (
-                          <img
-                            src={
-                              cat.image_url.startsWith("http")
-                                ? cat.image_url
-                                : `${backendUrl}${cat.image_url}`
-                            }
-                            className="w-14 h-14 object-cover rounded"
-                            alt={cat.name}
-                          />
-                        ) : (
-                          <span className="text-gray-400 italic text-sm">
-                            N/A
-                          </span>
-                        )}
+                        {(() => {
+                          const imageSrc = cat.image_url || cat.preview_image;
+
+                          return imageSrc ? (
+                            <img
+                              src={
+                                imageSrc.startsWith("http")
+                                  ? imageSrc
+                                  : `${backendUrl}${imageSrc}`
+                              }
+                              className="w-14 h-14 object-cover rounded"
+                              alt={cat.name}
+                            />
+                          ) : (
+                            <span className="text-gray-400 italic text-sm">
+                              N/A
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       <td className="p-3 border font-medium">{cat.name}</td>
@@ -356,18 +363,27 @@ export default function CategoryManager() {
                       </td>
 
                       <td className="p-3 border text-center">
-                        <button
-                          onClick={() => handleEdit(cat)}
-                          className="px-3 py-1 bg-blue-500 text-white rounded mr-2 hover:bg-blue-600 transition text-sm"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(cat.id)}
-                          className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition text-sm"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex justify-center gap-3">
+                          <button
+                            onClick={() => handleEdit(cat)}
+                            className="w-9 h-9 flex items-center justify-center
+                                       bg-blue-100 text-blue-600 rounded-full
+                                       hover:bg-blue-200 transition"
+                            title="Edit"
+                          >
+                            <i className="fa-solid fa-pen text-sm"></i>
+                          </button>
+
+                          <button
+                            onClick={() => handleDelete(cat.id)}
+                            className="w-9 h-9 flex items-center justify-center
+                                       bg-red-100 text-red-600 rounded-full
+                                       hover:bg-red-200 transition"
+                            title="Delete"
+                          >
+                            <i className="fa-solid fa-trash text-sm"></i>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

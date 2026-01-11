@@ -5,7 +5,7 @@ import API from "../api.jsx";
 export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
-    productCount: 0,
+    categoriesCount: 0,
     totalStock: 0,
     orders: 0,
     banners: 0,
@@ -21,19 +21,28 @@ export default function Dashboard() {
         API.get("/admin/products", { headers }),
         API.get("/admin/orders", { headers }),
         API.get("/admin/banners", { headers }),
+        API.get("/categories", { headers }),
       ]);
 
       // Helper to safely extract data array
       const getData = (result) => {
-        if (result.status === "fulfilled" && result.value.data) {
-          return Array.isArray(result.value.data) ? result.value.data : [];
-        }
-        return [];
-      };
+  if (result.status !== "fulfilled") return [];
+
+  const data = result.value.data;
+
+  // Case 1: API trả thẳng array
+  if (Array.isArray(data)) return data;
+
+  // Case 2: API trả { data: [...] }
+  if (data && Array.isArray(data.data)) return data.data;
+
+  return [];
+};
 
       const products = getData(results[0]);
       const orders = getData(results[1]);
       const banners = getData(results[2]);
+      const categories = getData(results[3]);
 
       // Calculate total stock from all products
       const totalStockCount = products.reduce(
@@ -43,7 +52,7 @@ export default function Dashboard() {
 
       // Update the state with the calculated statistics
       setStats({
-        productCount: products.length,
+        categoriesCount: categories.length,
         totalStock: totalStockCount,
         orders: orders.length,
         banners: banners.length,
@@ -133,7 +142,7 @@ export default function Dashboard() {
                 <i className="fa-solid fa-tags fa-3x text-dark"></i>
               </div>
               <h6 className="text-muted text-uppercase fw-bold mb-2">Product Categories</h6>
-              <h2 className="fw-bold text-dark mb-0">{stats.productCount}</h2> {/* Reusing productCount for the number of products */}
+              <h2 className="fw-bold text-dark mb-0">{stats.categoriesCount}</h2> {/* Reusing productCount for the number of products */}
               <p className="text-muted small mt-2 mb-0">Add, edit, delete categories</p>
             </div>
             <div className="card-footer bg-transparent border-0 pb-3">

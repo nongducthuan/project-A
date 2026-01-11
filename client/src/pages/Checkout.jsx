@@ -10,7 +10,41 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState("cod"); // Default to COD (Cash on Delivery)
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [isLocating, setIsLocating] = useState(false);
   const navigate = useNavigate();
+
+  const handleGetCurrentLocation = () => {
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        const { latitude, longitude } = position.coords;
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+        );
+        const data = await res.json();
+        if (data && data.display_name) {
+          const rawParts = data.display_name.split(",").map(p => p.trim());
+          const cleanParts = [];
+          rawParts.forEach((part) => {
+            const isDuplicate = cleanParts.some(
+              (addedPart) => addedPart.includes(part) || part.includes(addedPart)
+            );
+
+            if (!isDuplicate) {
+              cleanParts.push(part);
+            }
+          });
+          const finalAddress = cleanParts.slice(0, -2).join(", ");
+          setAddress(finalAddress);
+        }
+      } catch (err) {
+        setMessage("❌ Location Error.");
+      } finally {
+        setIsLocating(false);
+      }
+    });
+  };
 
   // Retrieve user information from local storage
   const user = localStorage.getItem("user")
@@ -46,8 +80,13 @@ export default function Checkout() {
 
     // Guest user validation
     if (!user) {
-      if (!guestName.trim() || !guestPhone.trim()) {
-        setMessage("Please enter your name and phone number!");
+      if (!guestName.trim() || !guestPhone.trim() || !guestEmail.trim()) {
+        setMessage("Please enter your name, phone, and email!"); // Thêm email vào đây
+        return;
+      }
+      // Check định dạng email cơ bản
+      if (!guestEmail.includes("@")) {
+        setMessage("Invalid email format!");
         return;
       }
     }
@@ -69,6 +108,7 @@ export default function Checkout() {
         // Use user's info if logged in, otherwise use guest info
         phone: user ? user.phone : guestPhone,
         name: user ? user.name : guestName,
+        email: user ? user.email : guestEmail,
         items: itemsPayload,
         payment_method: paymentMethod,
       };
@@ -123,12 +163,26 @@ export default function Checkout() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-6xl mx-auto">
         {/* --- LEFT COLUMN: INFO & PAYMENT (7/12 width on large screens) --- */}
         <div className="lg:col-span-7 space-y-6">
-          {/* 1. Shipping Address */}
+          {/* 1a. Shipping Address */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <i className="fa-solid fa-location-dot text-violet-600"></i>
-              Shipping Address
-            </h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <i className="fa-solid fa-location-dot text-violet-600"></i>
+                Shipping Address
+              </h3>
+
+              {/* Nút lấy vị trí hiện tại */}
+              <button
+                type="button"
+                onClick={handleGetCurrentLocation}
+                className="text-xs flex items-center gap-1 text-violet-600 hover:text-violet-800 font-medium transition"
+                disabled={isLocating}
+              >
+                <i className={`fa-solid ${isLocating ? "fa-spinner animate-spin" : "fa-crosshairs"}`}></i>
+                {isLocating ? "Locating..." : "Use Current Location"}
+              </button>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">
                 Enter detailed address <span className="text-red-500">*</span>
@@ -142,8 +196,8 @@ export default function Checkout() {
               ></textarea>
             </div>
           </div>
-          
-          {/* 1b. Guest Information (if not logged in) */}
+
+          {/* 1b. Guest Information (nếu chưa đăng nhập) */}
           {!user && (
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
               <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -151,26 +205,43 @@ export default function Checkout() {
                 Customer Information
               </h3>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-600">Full Name</label>
-                <input
-                  type="text"
-                  className="w-full p-3 border rounded-lg"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="Enter your full name"
-                />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600">Full Name <span className="text-red-500">*</span> </label>
+                  <input
+                    type="text"
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-violet-400 outline-none"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="Enter your full name"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-600">Phone Number</label>
-                <input
-                  type="text"
-                  className="w-full p-3 border rounded-lg"
-                  value={guestPhone}
-                  onChange={(e) => setGuestPhone(e.target.value)}
-                  placeholder="Enter phone number"
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-600">Phone Number <span className="text-red-500">*</span> </label>
+                  <input
+                    type="text"
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-violet-400 outline-none"
+                    value={guestPhone}
+                    onChange={(e) => setGuestPhone(e.target.value)}
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-600">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-violet-400 outline-none"
+                    value={guestEmail}
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                    placeholder="Your email to receive Order OTP"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1 italic">
+                    * Used to track your order status later.
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -185,8 +256,8 @@ export default function Checkout() {
               {/* COD (Cash on Delivery) */}
               <label
                 className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition ${paymentMethod === "cod"
-                    ? "border-violet-600 bg-violet-50"
-                    : "hover:bg-gray-50"
+                  ? "border-violet-600 bg-violet-50"
+                  : "hover:bg-gray-50"
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -214,8 +285,8 @@ export default function Checkout() {
               {/* Bank Transfer */}
               <label
                 className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition ${paymentMethod === "banking"
-                    ? "border-violet-600 bg-violet-50"
-                    : "hover:bg-gray-50"
+                  ? "border-violet-600 bg-violet-50"
+                  : "hover:bg-gray-50"
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -242,18 +313,18 @@ export default function Checkout() {
 
               {/* E-Wallet */}
               <label
-                className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition ${paymentMethod === "momo"
-                    ? "border-violet-600 bg-violet-50"
-                    : "hover:bg-gray-50"
+                className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition ${paymentMethod === "e-wallet"
+                  ? "border-violet-600 bg-violet-50"
+                  : "hover:bg-gray-50"
                   }`}
               >
                 <div className="flex items-center gap-3">
                   <input
                     type="radio"
                     name="payment"
-                    value="momo"
-                    checked={paymentMethod === "momo"}
-                    onChange={() => setPaymentMethod("momo")}
+                    value="e-wallet"
+                    checked={paymentMethod === "e-wallet"}
+                    onChange={() => setPaymentMethod("e-wallet")}
                     className="text-violet-600 focus:ring-violet-500"
                   />
                   <div>
@@ -272,8 +343,8 @@ export default function Checkout() {
           {/* 3. Complete Order Button (Located on the left for better flow) */}
           <button
             className={`w-full py-4 rounded-xl font-bold text-lg text-white shadow-lg transition transform active:scale-95 ${!address
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-violet-600 hover:bg-violet-700"
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-violet-600 hover:bg-violet-700"
               }`}
             onClick={handleCheckout}
             disabled={!address}
@@ -285,8 +356,8 @@ export default function Checkout() {
           {message && (
             <div
               className={`text-center p-3 rounded-lg font-medium ${message.includes("✅")
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
                 }`}
             >
               {message}
@@ -303,7 +374,7 @@ export default function Checkout() {
 
             {/* Product List */}
             {/* Added custom-scrollbar class for styling flexibility if needed */}
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 mb-6"> 
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 mb-6">
               {cart.map((item, index) => (
                 <div key={index} className="flex gap-4 items-start">
                   {/* Product Image */}

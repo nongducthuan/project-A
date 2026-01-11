@@ -31,29 +31,3 @@ body {
   padding-top: 35px;
   background-color: var(--color-bg) !important;
 }
-
-.carousel img {
-  position: relative;
-  height: 100%;
-}
-
-.carousel-caption {
-  position: absolute;
-  height: 75%;
-}
-
-@media (min-width: 768px) {
-
-  html,
-  body {
-    padding-top: 35px;
-  }
-
-  .carousel img {
-    height: 100%;
-  }
-
-  .carousel-caption {
-    height: 50%;
-  }
-}

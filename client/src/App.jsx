@@ -41,7 +41,7 @@ function App() {
 
             {/* --- AUTH REQUIRED --- */}
             <Route path="/checkout" element={<Checkout />} />
-            <Route path="/orders" element={<Order />} />
+            <Route path="/order" element={<Order />} />
             <Route path="/profile" element={<Profile />} />
 
             {/* --- ADMIN --- */}
