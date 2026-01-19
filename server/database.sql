@@ -176,6 +176,11 @@ CREATE TABLE otps (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+INSERT INTO memberships (name, min_spending, discount_percent) VALUES 
+('Bronze', 0, 0),         
+('Silver', 5000000, 5), 
+('Gold', 10000000, 10);
+
 -- ===============================================================
 -- 11. SEED CATEGORIES
 -- ===============================================================

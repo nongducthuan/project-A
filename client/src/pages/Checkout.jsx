@@ -1,10 +1,12 @@
 import { useContext, useState, useMemo } from "react";
 import { CartContext } from "../context/CartContext.jsx";
+import { AuthContext } from "../context/AuthContext.jsx";
 import API from "../api.jsx";
 import { useNavigate } from "react-router-dom";
 
 export default function Checkout() {
   const { cart, setCart } = useContext(CartContext);
+  const { user, discount, tier } = useContext(AuthContext);
   const [message, setMessage] = useState("");
   const [address, setAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cod"); // Default to COD (Cash on Delivery)
@@ -15,49 +17,82 @@ export default function Checkout() {
   const navigate = useNavigate();
 
   const handleGetCurrentLocation = () => {
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(async (position) => {
+  setIsLocating(true);
+  setMessage(""); // Xóa thông báo cũ
+
+  navigator.geolocation.getCurrentPosition(
+    // 1. Tham số thứ nhất: THÀNH CÔNG
+    async (position) => {
       try {
         const { latitude, longitude } = position.coords;
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
         );
         const data = await res.json();
+        
         if (data && data.display_name) {
+          // Logic xử lý địa chỉ của bạn giữ nguyên...
           const rawParts = data.display_name.split(",").map(p => p.trim());
           const cleanParts = [];
           rawParts.forEach((part) => {
             const isDuplicate = cleanParts.some(
               (addedPart) => addedPart.includes(part) || part.includes(addedPart)
             );
-
-            if (!isDuplicate) {
-              cleanParts.push(part);
-            }
+            if (!isDuplicate) cleanParts.push(part);
           });
           const finalAddress = cleanParts.slice(0, -2).join(", ");
           setAddress(finalAddress);
         }
       } catch (err) {
-        setMessage("❌ Location Error.");
+        console.error(err);
+        setMessage("❌ Lỗi khi lấy địa chỉ từ tọa độ.");
       } finally {
-        setIsLocating(false);
+        setIsLocating(false); // Dừng quay khi xong
       }
-    });
-  };
-
-  // Retrieve user information from local storage
-  const user = localStorage.getItem("user")
-    ? JSON.parse(localStorage.getItem("user"))
-    : null;
+    },
+    // 2. Tham số thứ hai: THẤT BẠI (Quan trọng!)
+    (error) => {
+      console.error("Geolocation Error:", error);
+      setIsLocating(false); // DỪNG QUAY NGAY LẬP TỨC NẾU LỖI
+      
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          setMessage("❌ Bạn đã từ chối quyền truy cập vị trí.");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          setMessage("❌ Không thể xác định được vị trí.");
+          break;
+        case error.TIMEOUT:
+          setMessage("❌ Quá thời gian lấy vị trí.");
+          break;
+        default:
+          setMessage("❌ Lỗi vị trí không xác định.");
+          break;
+      }
+    },
+    // 3. Tham số thứ ba: CẤU HÌNH (Options)
+    {
+      enableHighAccuracy: true,
+      timeout: 10000, // Nếu sau 10 giây không lấy được thì báo lỗi timeout
+      maximumAge: 0
+    }
+  );
+};
 
   // Calculate the total price of all items in the cart
-  const total = useMemo(() => {
+  // 1. Tính tổng tiền hàng (chưa giảm)
+  const subtotal = useMemo(() => {
     return cart.reduce(
       (sum, p) => sum + Number(p.price) * (p.quantity ?? 1),
       0
     );
   }, [cart]);
+
+  // 2. Tính số tiền được giảm (dựa trên discount từ AuthContext)
+  const discountAmount = user ? (subtotal * (discount / 100)) : 0;
+
+  // 3. Tổng tiền cuối cùng khách phải trả
+  const finalTotal = subtotal - discountAmount;
 
   // Helper function to handle image URLs (important for correct display)
   const getImgUrl = (item) => {
@@ -92,7 +127,6 @@ export default function Checkout() {
     }
 
     try {
-      // Map cart items to the required payload format
       const itemsPayload = cart.map((p) => ({
         product_id: p.id,
         color_id: p.color_id,
@@ -100,12 +134,10 @@ export default function Checkout() {
         quantity: p.quantity || 1,
       }));
 
-      // Construct the order data payload
       const orderData = {
         user_id: user ? user.id : null,
-        total_price: total,
+        total_price: finalTotal, // GỬI GIÁ ĐÃ GIẢM Ở ĐÂY
         address,
-        // Use user's info if logged in, otherwise use guest info
         phone: user ? user.phone : guestPhone,
         name: user ? user.name : guestName,
         email: user ? user.email : guestEmail,
@@ -416,15 +448,25 @@ export default function Checkout() {
             <div className="border-t pt-4 space-y-2">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal:</span>
-                <span>{total.toLocaleString()}đ</span>
+                <span>{subtotal.toLocaleString()}đ</span>
               </div>
+
+              {/* HIỂN THỊ GIẢM GIÁ NẾU CÓ */}
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-red-600 font-medium bg-red-50 p-1 rounded">
+                  <span>Member Discount ({tier}):</span>
+                  <span>-{discountAmount.toLocaleString()}đ</span>
+                </div>
+              )}
+
               <div className="flex justify-between text-gray-600">
                 <span>Shipping Fee:</span>
                 <span className="text-green-600 font-medium">Free</span>
               </div>
+
               <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t mt-2">
                 <span>Total:</span>
-                <span className="text-red-600">{total.toLocaleString()}đ</span>
+                <span className="text-red-600">{finalTotal.toLocaleString()}đ</span>
               </div>
             </div>
           </div>

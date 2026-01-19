@@ -1,5 +1,7 @@
 const db = require("../db");
 const orderModel = require("../models/orderModel");
+const user = require("../models/userModel"); // THÊM DÒNG NÀY
+const membership = require("../models/membershipModel"); // THÊM DÒNG NÀY
 const { sendEmail } = require("../utils/emailService");
 
 // 1. Gửi OTP
@@ -103,60 +105,92 @@ async function createOrderController(req, res) {
   try {
     await connection.beginTransaction();
 
-    // 1. Thêm 'email' vào danh sách lấy từ body
-    const { user_id, address, total_price, items, phone, name, email } = req.body;
+    const { user_id, address, items, phone, name, email } = req.body;
 
-    // VALIDATION cơ bản
+    // 1. Validation cơ bản
     if (!address || !items || items.length === 0) {
-      return res.status(400).json({ message: "Invalid data" });
+      return res.status(400).json({ message: "Dữ liệu đơn hàng không hợp lệ" });
     }
 
-    // 2. Cập nhật Validation cho khách (Guest)
-    if (!user_id) {
-      // Bắt buộc khách phải cung cấp cả email để tra cứu OTP sau này
-      if (!name || !phone || !email) { 
-        return res
-          .status(400)
-          .json({ message: "Guest must provide name, phone and email" });
+    if (!user_id && (!name || !phone || !email)) {
+      return res.status(400).json({ message: "Khách vãng lai phải cung cấp đầy đủ thông tin" });
+    }
+
+    // 2. TÍNH TOÁN LẠI TỔNG TIỀN TẠI SERVER (Bảo mật)
+    let serverCalculatedTotal = 0;
+
+    for (const item of items) {
+      // Lấy giá gốc từ DB dựa trên product_id (Không tin giá từ Frontend)
+      const [productRows] = await connection.execute(
+        "SELECT price FROM products WHERE id = ?",
+        [item.product_id]
+      );
+      
+      if (productRows.length === 0) {
+        throw new Error(`Sản phẩm ID ${item.product_id} không tồn tại`);
+      }
+
+      const price = parseFloat(productRows[0].price);
+      serverCalculatedTotal += price * item.quantity;
+    }
+
+    // 3. ÁP DỤNG GIẢM GIÁ MEMBERSHIP (Nếu có user_id)
+    let discountAmount = 0;
+    if (user_id) {
+      const [memberRows] = await connection.execute(
+        `SELECT m.discount_percent 
+         FROM users u 
+         JOIN memberships m ON u.membership_id = m.id 
+         WHERE u.id = ?`,
+        [user_id]
+      );
+
+      if (memberRows.length > 0) {
+        const discountPercent = memberRows[0].discount_percent;
+        discountAmount = (serverCalculatedTotal * discountPercent) / 100;
+        serverCalculatedTotal -= discountAmount;
       }
     }
 
-    // 3. Truyền email vào Model (nhớ cập nhật hàm này ở file orderModel.js)
+    // 4. (Tùy chọn) Áp dụng Voucher nếu bạn có gửi voucher_id lên
+    // logic tương tự: check voucher trong DB -> trừ tiền
+
+    // 5. LƯU ĐƠN HÀNG VỚI GIÁ ĐÃ CHỐT BỞI SERVER
     const orderId = await orderModel.createOrder(
       connection,
       user_id || null,
-      total_price,
+      serverCalculatedTotal, // GIÁ AN TOÀN
       address,
       phone,
       name,
-      email 
+      email
     );
 
     await orderModel.addOrderItems(connection, orderId, items);
 
     await connection.commit();
 
-    // 4. (Tùy chọn) Gửi email xác nhận ngay lập tức sau khi đặt hàng thành công
-    // Việc này giúp khách có bằng chứng đã đặt hàng ngay trong inbox
+    // 6. Gửi email xác nhận
     try {
-        sendEmail(
-            email || req.user?.email, 
-            "Order Confirmation", 
-            `Thank you! Your order #${orderId} has been placed successfully. Total: ${total_price.toLocaleString()}đ`
-        );
+      sendEmail(
+        email || (user_id ? req.user?.email : null),
+        "Xác nhận đơn hàng",
+        `Cảm ơn bạn! Đơn hàng #${orderId} đã được đặt thành công. Tổng tiền: ${serverCalculatedTotal.toLocaleString()}đ`
+      );
     } catch (mailErr) {
-        console.error("Mail confirmation failed:", mailErr);
-        // Không return lỗi ở đây vì đơn hàng đã tạo thành công trong DB rồi
+      console.error("Gửi mail thất bại:", mailErr);
     }
 
-    res.status(201).json({ message: "Order created successfully", orderId });
+    res.status(201).json({ 
+      message: "Đặt hàng thành công", 
+      orderId, 
+      total: serverCalculatedTotal 
+    });
 
   } catch (error) {
     await connection.rollback();
-    res.status(500).json({
-      message: "Error creating order",
-      error: error.message,
-    });
+    console.error("Lỗi đặt hàng:", error);
+    res.status(500).json({ message: "Lỗi hệ thống khi tạo đơn hàng", error: error.message });
   } finally {
     connection.release();
   }
@@ -177,12 +211,11 @@ async function getOrders(req, res) {
 async function changeOrderStatus(req, res) {
   try {
     const { order_id, new_status } = req.body;
-
-    await orderModel.changeOrderStatus(order_id, new_status);
-
-    res.json({ message: "Status updated successfully" }); // Changed
+    // Chỉ cần gọi model, model sẽ lo hết từ kho đến tiền
+    await orderModel.changeOrderStatus(order_id, new_status); 
+    res.json({ message: "Cập nhật thành công!" });
   } catch (err) {
-    res.status(500).json({ message: "Error updating status", error: err.message }); // Changed
+    res.status(500).json({ message: "Lỗi", error: err.message });
   }
 }
 

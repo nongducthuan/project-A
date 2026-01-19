@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
+import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
@@ -8,7 +9,6 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Checkout from "./pages/Checkout";
 import Dashboard from "./pages/Dashboard.jsx";
-import AuthProvider from "./context/AuthContext";
 import Order from "./pages/Order";
 import Search from "./pages/Search";
 import ProductDetail from "./pages/ProductDetail";

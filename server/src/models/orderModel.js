@@ -70,43 +70,73 @@ async function changeOrderStatus(orderId, newStatus) {
   try {
     await connection.beginTransaction();
 
-    // Lấy đơn hàng và items
+    // 1. Lấy thông tin đơn hàng hiện tại (TRƯỚC KHI UPDATE)
     const [orderRows] = await connection.query("SELECT * FROM orders WHERE id=?", [orderId]);
     const order = orderRows[0];
-    const [items] = await connection.query("SELECT * FROM order_items WHERE order_id=?", [orderId]);
+    if (!order) throw new Error("Order not found");
+    
+    const oldStatus = order.status; // Trạng thái hiện tại trong DB
+    const totalPrice = Number(order.total_price);
+    const userId = order.user_id;
 
-    // Nhóm trạng thái
+    // 2. LOGIC KHO HÀNG (Giữ nguyên của bạn)
     const group = ["Pending", "Cancelled"];
-
-    const oldGroup = group.includes(order.status) ? 1 : 2;
+    const oldGroup = group.includes(oldStatus) ? 1 : 2;
     const newGroup = group.includes(newStatus) ? 1 : 2;
 
-    // Nếu chuyển nhóm 1 → nhóm 2 → trừ kho
+    const [items] = await connection.query("SELECT * FROM order_items WHERE order_id=?", [orderId]);
     if (oldGroup === 1 && newGroup === 2) {
       for (const item of items) {
         if (item.size_id) {
-          await connection.query(
-            "UPDATE product_sizes SET stock = stock - ? WHERE id = ? AND stock >= ?",
-            [item.quantity, item.size_id, item.quantity]
-          );
+          await connection.query("UPDATE product_sizes SET stock = stock - ? WHERE id = ? AND stock >= ?", [item.quantity, item.size_id, item.quantity]);
         }
       }
-    }
-
-    // Nếu chuyển nhóm 2 → nhóm 1 → cộng kho
-    if (oldGroup === 2 && newGroup === 1) {
+    } else if (oldGroup === 2 && newGroup === 1) {
       for (const item of items) {
         if (item.size_id) {
-          await connection.query(
-            "UPDATE product_sizes SET stock = stock + ? WHERE id = ?",
-            [item.quantity, item.size_id]
-          );
+          await connection.query("UPDATE product_sizes SET stock = stock + ? WHERE id = ?", [item.quantity, item.size_id]);
         }
       }
     }
 
-    // Cập nhật trạng thái đơn
+    // 3. LOGIC TIỀN TỆ & HẠNG THÀNH VIÊN (SỬA LẠI Ở ĐÂY)
+    if (userId) {
+      let moneyChange = 0;
+
+      // TRƯỜNG HỢP 1: Chuyển từ trạng thái KHÁC sang Delivered -> CỘNG TIỀN
+      if (oldStatus !== "Delivered" && newStatus === "Delivered") {
+        moneyChange = totalPrice;
+      } 
+      // TRƯỜNG HỢP 2: Chuyển từ Delivered sang trạng thái KHÁC -> TRỪ TIỀN
+      else if (oldStatus === "Delivered" && newStatus !== "Delivered") {
+        moneyChange = -totalPrice;
+      }
+
+      if (moneyChange !== 0) {
+        // Cập nhật tổng chi tiêu (có thể tăng hoặc giảm)
+        await connection.query(
+          "UPDATE users SET total_spent = total_spent + ? WHERE id = ?",
+          [moneyChange, userId]
+        );
+
+        // Tính toán lại hạng thành viên sau khi thay đổi tiền
+        const [userRows] = await connection.query("SELECT total_spent FROM users WHERE id = ?", [userId]);
+        const currentSpent = userRows[0].total_spent;
+
+        const [tiers] = await connection.query(
+          "SELECT id FROM memberships WHERE min_spending <= ? ORDER BY min_spending DESC LIMIT 1",
+          [currentSpent]
+        );
+
+        if (tiers.length > 0) {
+          await connection.query("UPDATE users SET membership_id = ? WHERE id = ?", [tiers[0].id, userId]);
+        }
+      }
+    }
+
+    // 4. Cuối cùng mới cập nhật trạng thái đơn hàng
     await connection.query("UPDATE orders SET status=? WHERE id=?", [newStatus, orderId]);
+
     await connection.commit();
   } catch (error) {
     await connection.rollback();
